@@ -1,0 +1,49 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: shoppio-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: shoppio
+      POSTGRES_PASSWORD: shoppio
+      POSTGRES_DB: shoppio
+    ports:
+      - '5432:5432'
+    volumes:
+      - shoppio_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U shoppio -d shoppio']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  adminer:
+    image: adminer:4
+    container_name: shoppio-adminer
+    restart: unless-stopped
+    ports:
+      - '8080:8080'
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # Optional: run the API inside Docker (prefer host `npm run start:dev` for HMR)
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: shoppio-api
+    profiles: ['full']
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://shoppio:shoppio@postgres:5432/shoppio?schema=public
+    ports:
+      - '3000:3000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  shoppio_pg_data:

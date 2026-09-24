@@ -1,0 +1,24 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.log
+
+# Env secrets
+.env
+.env.*
+**/.env
+**/.env.*
+!**/.env.example
+
+# Dependencies / build
+**/node_modules/
+**/vendor/
+**/dist/
+**/.next/
+**/out/
+**/coverage/
+**/.phpunit.cache/
+**/.turbo/
+*.tsbuildinfo

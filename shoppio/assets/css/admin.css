@@ -1,0 +1,12 @@
+.shoppio-settings .shoppio-status {
+	display: inline-block;
+	font-weight: 600;
+}
+
+.shoppio-settings .shoppio-status--connected {
+	color: #007017;
+}
+
+.shoppio-settings .shoppio-status--disconnected {
+	color: #8a2424;
+}

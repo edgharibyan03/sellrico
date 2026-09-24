@@ -1,0 +1,11 @@
+parameters:
+  level: 6
+  paths:
+    - src
+    - shoppio.php
+    - uninstall.php
+  excludePaths:
+    - vendor
+    - tests
+  bootstrapFiles:
+    - tests/phpstan-bootstrap.php
