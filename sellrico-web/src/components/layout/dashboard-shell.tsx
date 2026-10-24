@@ -1,7 +1,5 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
 import {
   Bot,
   CreditCard,
@@ -14,7 +12,9 @@ import {
   Settings,
   Store,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
+import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { Logo } from "@/components/layout/logo";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -26,31 +26,34 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { getSession, logout } from "@/lib/api/auth";
 import type { User } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-const nav = [
-  { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
-  { href: "/dashboard/sites", label: "Sites", icon: Store },
-  { href: "/dashboard/assistant", label: "AI Assistant", icon: Bot },
-  { href: "/dashboard/products", label: "Products", icon: Package },
-  { href: "/dashboard/usage", label: "Usage", icon: Gauge },
-  { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },
-  { href: "/dashboard/billing", label: "Billing", icon: CreditCard },
-  { href: "/dashboard/settings", label: "Settings", icon: Settings },
+const navItems = [
+  { href: "/dashboard", labelKey: "overview" as const, icon: LayoutDashboard },
+  { href: "/dashboard/sites", labelKey: "sites" as const, icon: Store },
+  { href: "/dashboard/assistant", labelKey: "assistant" as const, icon: Bot },
+  { href: "/dashboard/products", labelKey: "products" as const, icon: Package },
+  { href: "/dashboard/usage", labelKey: "usage" as const, icon: Gauge },
+  { href: "/dashboard/analytics", labelKey: "analytics" as const, icon: BarChart3 },
+  { href: "/dashboard/billing", labelKey: "billing" as const, icon: CreditCard },
+  { href: "/dashboard/settings", labelKey: "settings" as const, icon: Settings },
 ];
 
 function NavLinks({
   onNavigate,
   pathname,
+  labels,
 }: {
   onNavigate?: () => void;
   pathname: string;
+  labels: Record<(typeof navItems)[number]["labelKey"], string>;
 }) {
   return (
     <nav className="flex flex-col gap-1" aria-label="Dashboard">
-      {nav.map((item) => {
+      {navItems.map((item) => {
         const active =
           item.href === "/dashboard"
             ? pathname === "/dashboard"
@@ -69,7 +72,7 @@ function NavLinks({
             )}
           >
             <Icon className="size-4 shrink-0" />
-            {item.label}
+            {labels[item.labelKey]}
           </Link>
         );
       })}
@@ -80,6 +83,19 @@ function NavLinks({
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const tNav = useTranslations("nav");
+  const tc = useTranslations("common");
+  const tShell = useTranslations("dashboard.shell");
+  const navLabels = {
+    overview: tNav("overview"),
+    sites: tNav("sites"),
+    assistant: tNav("assistant"),
+    products: tNav("products"),
+    usage: tNav("usage"),
+    analytics: tNav("analytics"),
+    billing: tNav("billing"),
+    settings: tNav("settings"),
+  };
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -131,8 +147,9 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-full bg-background">
       <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-sidebar-border bg-sidebar p-4 md:flex">
         <Logo href="/dashboard" showProduct className="mb-6" />
-        <NavLinks pathname={pathname} />
+        <NavLinks pathname={pathname} labels={navLabels} />
         <div className="mt-auto flex flex-col gap-3 pt-6">
+          <LanguageSwitcher className="w-full justify-center" />
           <Separator />
           <div className="px-1">
             <p className="truncate text-sm font-medium">{user?.name}</p>
@@ -146,7 +163,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             onClick={() => void handleLogout()}
           >
             <LogOut data-icon="inline-start" />
-            Log out
+            {tc("logOut")}
           </Button>
         </div>
       </aside>
@@ -159,25 +176,27 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               className={cn(
                 buttonVariants({ variant: "outline", size: "icon" }),
               )}
-              aria-label="Open navigation"
+              aria-label={tShell("openNavigation")}
             >
               <Menu />
             </SheetTrigger>
             <SheetContent side="left" className="w-72">
               <SheetHeader>
-                <SheetTitle>Navigation</SheetTitle>
+                <SheetTitle>{tc("navigation")}</SheetTitle>
               </SheetHeader>
               <div className="mt-4">
                 <NavLinks
                   pathname={pathname}
+                  labels={navLabels}
                   onNavigate={() => setMobileOpen(false)}
                 />
               </div>
               <div className="mt-6 flex flex-col gap-2 border-t border-border pt-4">
+                <LanguageSwitcher />
                 <p className="text-sm font-medium">{user?.name}</p>
                 <Button variant="outline" onClick={() => void handleLogout()}>
                   <LogOut data-icon="inline-start" />
-                  Log out
+                  {tc("logOut")}
                 </Button>
               </div>
             </SheetContent>

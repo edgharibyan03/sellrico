@@ -1,5 +1,7 @@
-import Link from "next/link";
+"use client";
+
 import { Lock } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -8,6 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Link } from "@/i18n/navigation";
 
 export function UpgradePrompt({
   title,
@@ -16,6 +19,7 @@ export function UpgradePrompt({
   title: string;
   description: string;
 }) {
+  const t = useTranslations("dashboard.billing");
   return (
     <Card className="border-primary/30 bg-primary/5">
       <CardHeader>
@@ -24,7 +28,7 @@ export function UpgradePrompt({
       </CardHeader>
       <CardContent>
         <Link href="/pricing" className={buttonVariants({ size: "sm" })}>
-          View plans
+          {t("viewPlans")}
         </Link>
       </CardContent>
     </Card>
@@ -40,6 +44,7 @@ export function LockedFeature({
   description: string;
   availableOn: string;
 }) {
+  const t = useTranslations("dashboard.billing");
   return (
     <Card>
       <CardHeader>
@@ -50,12 +55,14 @@ export function LockedFeature({
         <CardDescription>{description}</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col items-start gap-3">
-        <p className="text-sm font-medium">Available on {availableOn}</p>
+        <p className="text-sm font-medium">
+          {t("availableOn", { plan: availableOn })}
+        </p>
         <Link
           href="/pricing"
           className={buttonVariants({ variant: "outline", size: "sm" })}
         >
-          Upgrade
+          {t("upgrade")}
         </Link>
       </CardContent>
     </Card>
@@ -71,6 +78,7 @@ export function UsageMeter({
   used: number;
   limit: number | null | undefined;
 }) {
+  const t = useTranslations("dashboard.billing");
   const capped =
     limit != null && limit > 0
       ? Math.min(100, Math.round((used / limit) * 100))
@@ -105,9 +113,9 @@ export function UsageMeter({
         </div>
       ) : null}
       {reached ? (
-        <p className="text-xs text-destructive">Limit reached</p>
+        <p className="text-xs text-destructive">{t("limitReached")}</p>
       ) : close ? (
-        <p className="text-xs text-amber-700">Almost at the limit</p>
+        <p className="text-xs text-amber-700">{t("almostAtLimit")}</p>
       ) : null}
     </div>
   );

@@ -1,6 +1,7 @@
 "use client"
 
-import Link from "next/link"
+import { useTranslations } from "next-intl"
+import { Link } from "@/i18n/navigation"
 import { buttonVariants } from "@/components/ui/button"
 import { useAuthGate } from "@/hooks/use-auth-gate"
 import { cn } from "@/lib/utils"
@@ -17,14 +18,17 @@ type AuthCtaLinkProps = {
 
 export function AuthCtaLink({
   guestHref = "/signup",
-  guestLabel = "Get Started",
-  loggedInLabel = "Go to dashboard",
+  guestLabel,
+  loggedInLabel,
   className,
   variant = "default",
   size = "default",
   onNavigate,
 }: AuthCtaLinkProps) {
+  const t = useTranslations("common")
   const { loggedIn, dashboardHref } = useAuthGate()
+  const guest = guestLabel ?? t("getStarted")
+  const loggedInText = loggedInLabel ?? t("goToDashboard")
 
   return (
     <Link
@@ -32,7 +36,7 @@ export function AuthCtaLink({
       onClick={onNavigate}
       className={cn(buttonVariants({ variant, size }), className)}
     >
-      {loggedIn ? loggedInLabel : guestLabel}
+      {loggedIn ? loggedInText : guest}
     </Link>
   )
 }
@@ -44,9 +48,9 @@ export function MarketingAuthActions({
 }: {
   onNavigate?: () => void
   className?: string
-  /** Mobile sheet: stack buttons vertically */
   stacked?: boolean
 }) {
+  const t = useTranslations("common")
   const { loggedIn, dashboardHref } = useAuthGate()
 
   if (loggedIn) {
@@ -57,7 +61,7 @@ export function MarketingAuthActions({
           onClick={onNavigate}
           className={buttonVariants({ className: stacked ? "mt-2" : undefined })}
         >
-          Go to dashboard
+          {t("goToDashboard")}
         </Link>
       </div>
     )
@@ -72,14 +76,14 @@ export function MarketingAuthActions({
             onClick={onNavigate}
             className={buttonVariants({ className: "mt-2" })}
           >
-            Get Started
+            {t("getStarted")}
           </Link>
           <Link
             href="/login"
             onClick={onNavigate}
             className={buttonVariants({ variant: "outline" })}
           >
-            Log in
+            {t("logIn")}
           </Link>
         </>
       ) : (
@@ -89,10 +93,10 @@ export function MarketingAuthActions({
             onClick={onNavigate}
             className={buttonVariants({ variant: "ghost" })}
           >
-            Log in
+            {t("logIn")}
           </Link>
           <Link href="/signup" onClick={onNavigate} className={buttonVariants()}>
-            Get Started
+            {t("getStarted")}
           </Link>
         </>
       )}

@@ -1,10 +1,12 @@
 "use client"
 
-import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname } from "@/i18n/navigation"
+import { Link } from "@/i18n/navigation"
 import { Menu } from "lucide-react"
+import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { MarketingAuthActions } from "@/components/auth/auth-cta-link"
+import { LanguageSwitcher } from "@/components/layout/language-switcher"
 import { Logo } from "@/components/layout/logo"
 import { buttonVariants } from "@/components/ui/button"
 import {
@@ -17,15 +19,17 @@ import {
 import { useAuthGate } from "@/hooks/use-auth-gate"
 import { cn } from "@/lib/utils"
 
-const links = [
-  { href: "/#how-it-works", label: "How it works" },
-  { href: "/pricing", label: "Pricing" },
-  { href: "/docs", label: "Docs" },
-]
-
 export function MarketingHeader() {
+  const t = useTranslations("nav")
+  const tc = useTranslations("common")
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
+
+  const links = [
+    { href: "/#how-it-works", label: t("howItWorks") },
+    { href: "/pricing", label: t("pricing") },
+    { href: "/docs", label: t("docs") },
+  ]
 
   return (
     <header className="sticky top-0 z-40 border-b border-border/80 bg-background/90 backdrop-blur-sm">
@@ -45,17 +49,20 @@ export function MarketingHeader() {
             </Link>
           ))}
         </nav>
-        <MarketingAuthActions className="hidden md:flex" />
+        <div className="hidden items-center gap-3 md:flex">
+          <LanguageSwitcher />
+          <MarketingAuthActions />
+        </div>
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger
             className={cn(buttonVariants({ variant: "outline", size: "icon" }), "md:hidden")}
-            aria-label="Open menu"
+            aria-label={tc("openMenu")}
           >
             <Menu />
           </SheetTrigger>
           <SheetContent side="right" className="w-72">
             <SheetHeader>
-              <SheetTitle>Menu</SheetTitle>
+              <SheetTitle>{tc("navigation")}</SheetTitle>
             </SheetHeader>
             <div className="mt-6 flex flex-col gap-3">
               {links.map((link) => (
@@ -68,6 +75,7 @@ export function MarketingHeader() {
                   {link.label}
                 </Link>
               ))}
+              <LanguageSwitcher className="mt-2 self-start" />
               <MarketingAuthActions
                 stacked
                 onNavigate={() => setOpen(false)}
@@ -81,17 +89,19 @@ export function MarketingHeader() {
 }
 
 function FooterAccountLinks() {
+  const t = useTranslations("nav")
+  const tc = useTranslations("common")
   const { loggedIn, dashboardHref } = useAuthGate()
 
   if (loggedIn) {
     return (
       <div className="flex flex-col gap-2">
-        <p className="font-medium">Account</p>
+        <p className="font-medium">{t("account")}</p>
         <Link
           href={dashboardHref}
           className="text-muted-foreground hover:text-foreground"
         >
-          Go to dashboard
+          {tc("goToDashboard")}
         </Link>
       </div>
     )
@@ -99,49 +109,50 @@ function FooterAccountLinks() {
 
   return (
     <div className="flex flex-col gap-2">
-      <p className="font-medium">Account</p>
+      <p className="font-medium">{t("account")}</p>
       <Link href="/login" className="text-muted-foreground hover:text-foreground">
-        Log in
+        {tc("logIn")}
       </Link>
       <Link href="/signup" className="text-muted-foreground hover:text-foreground">
-        Sign up
+        {tc("signUp")}
       </Link>
     </div>
   )
 }
 
 export function MarketingFooter() {
+  const t = useTranslations("nav")
+
   return (
     <footer className="border-t border-border bg-brand-mist">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-10 sm:px-6 md:flex-row md:items-start md:justify-between">
         <div className="flex flex-col gap-2">
           <Logo />
           <p className="max-w-xs text-sm text-muted-foreground">
-            Commerce tools for modern stores. Home of Shoppio — AI shopping for
-            WooCommerce.
+            {t("footerTagline")}
           </p>
         </div>
         <div className="grid grid-cols-2 gap-8 text-sm sm:grid-cols-3">
           <div className="flex flex-col gap-2">
-            <p className="font-medium">Product</p>
+            <p className="font-medium">{t("product")}</p>
             <Link href="/pricing" className="text-muted-foreground hover:text-foreground">
-              Pricing
+              {t("pricing")}
             </Link>
             <Link href="/docs" className="text-muted-foreground hover:text-foreground">
-              Docs
+              {t("docs")}
             </Link>
           </div>
           <FooterAccountLinks />
           <div className="flex flex-col gap-2">
-            <p className="font-medium">Legal</p>
-            <span className="text-muted-foreground">Privacy (soon)</span>
-            <span className="text-muted-foreground">Terms (soon)</span>
+            <p className="font-medium">{t("legal")}</p>
+            <span className="text-muted-foreground">{t("privacySoon")}</span>
+            <span className="text-muted-foreground">{t("termsSoon")}</span>
           </div>
         </div>
       </div>
       <div className="border-t border-border">
         <div className="mx-auto flex max-w-6xl px-4 py-4 text-xs text-muted-foreground sm:px-6">
-          © {new Date().getFullYear()} Sellrico. All rights reserved.
+          © {new Date().getFullYear()} Sellrico
         </div>
       </div>
     </footer>

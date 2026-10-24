@@ -1,4 +1,7 @@
+"use client"
+
 import { AlertCircle, Inbox, type LucideIcon } from "lucide-react"
+import { useTranslations } from "next-intl"
 import { Button } from "@/components/ui/button"
 import {
   Empty,
@@ -35,8 +38,9 @@ export function PageHeader({
 }
 
 export function LoadingBlock({ rows = 4 }: { rows?: number }) {
+  const t = useTranslations("pageStates")
   return (
-    <div className="flex flex-col gap-3" aria-busy="true" aria-label="Loading">
+    <div className="flex flex-col gap-3" aria-busy="true" aria-label={t("loading")}>
       {Array.from({ length: rows }).map((_, i) => (
         <Skeleton key={i} className="h-12 w-full" />
       ))}
@@ -45,26 +49,30 @@ export function LoadingBlock({ rows = 4 }: { rows?: number }) {
 }
 
 export function ErrorState({
-  title = "Something went wrong",
-  description = "Please try again. If the problem continues, contact support.",
+  title,
+  description,
   onRetry,
 }: {
   title?: string
   description?: string
   onRetry?: () => void
 }) {
+  const t = useTranslations("pageStates")
+  const resolvedTitle = title ?? t("errorTitle")
+  const resolvedDescription = description ?? t("errorDescription")
+
   return (
     <Empty className="border border-border bg-card">
       <EmptyHeader>
         <EmptyMedia variant="icon">
           <AlertCircle />
         </EmptyMedia>
-        <EmptyTitle>{title}</EmptyTitle>
-        <EmptyDescription>{description}</EmptyDescription>
+        <EmptyTitle>{resolvedTitle}</EmptyTitle>
+        <EmptyDescription>{resolvedDescription}</EmptyDescription>
       </EmptyHeader>
       {onRetry ? (
         <EmptyContent>
-          <Button onClick={onRetry}>Try again</Button>
+          <Button onClick={onRetry}>{t("tryAgain")}</Button>
         </EmptyContent>
       ) : null}
     </Empty>

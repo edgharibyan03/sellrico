@@ -1,0 +1,336 @@
+{
+  "meta": {
+    "title": "{name} — {tagline}",
+    "tagline": "Инструменты для современной коммерции",
+    "description": "{name} создаёт продукты для интернет-магазинов. {product} — наш AI-помощник для покупок в WooCommerce: покупатели находят товары и совершают покупки в диалоге."
+  },
+  "common": {
+    "getStarted": "Начать",
+    "logIn": "Войти",
+    "signUp": "Регистрация",
+    "goToDashboard": "Перейти в панель",
+    "logOut": "Выйти",
+    "backToHome": "На главную",
+    "tryAgain": "Повторить",
+    "loading": "Загрузка",
+    "save": "Сохранить",
+    "cancel": "Отмена",
+    "delete": "Удалить",
+    "continue": "Продолжить",
+    "back": "Назад",
+    "next": "Далее",
+    "openMenu": "Открыть меню",
+    "navigation": "Навигация",
+    "popular": "Популярный",
+    "monthly": "Ежемесячно",
+    "annual": "Ежегодно",
+    "perMonth": "/ мес.",
+    "comparePlans": "Сравнить тарифы",
+    "viewPricing": "Смотреть цены",
+    "seeHowItWorks": "Как это работает",
+    "language": "Язык",
+    "languageRu": "Русский",
+    "languageEn": "English",
+    "included": "Включено",
+    "notIncluded": "Не включено"
+  },
+  "nav": {
+    "howItWorks": "Как это работает",
+    "pricing": "Тарифы",
+    "docs": "Документация",
+    "overview": "Обзор",
+    "sites": "Сайты",
+    "assistant": "AI-помощник",
+    "products": "Товары",
+    "usage": "Использование",
+    "analytics": "Аналитика",
+    "billing": "Оплата",
+    "settings": "Настройки",
+    "product": "Продукт",
+    "account": "Аккаунт",
+    "legal": "Правовая информация",
+    "privacySoon": "Конфиденциальность (скоро)",
+    "termsSoon": "Условия (скоро)",
+    "footerTagline": "Инструменты для современной коммерции. Дом Shoppio — AI-покупки для WooCommerce."
+  },
+  "marketing": {
+    "hero": {
+      "title": "{name}",
+      "tagline": "Инструменты для современной коммерции",
+      "body": "Наш первый продукт — {product}, AI-помощник для покупок в WooCommerce. Покупатели задают вопросы, находят товары и получают рекомендации в диалоге.",
+      "ctaSecondary": "Как это работает"
+    },
+    "demo": {
+      "title": "Покупки, похожие на разговор",
+      "subtitle": "Демонстрация того, как покупатели общаются с Shoppio на витрине вашего магазина.",
+      "assistantName": "Помощник Shoppio",
+      "demoConversation": "Демо-диалог",
+      "liveBadge": "На вашем магазине",
+      "userMessage": "Нужна белая дверь для небольшой квартиры до $500.",
+      "assistantReply": "Конечно. Вот несколько вариантов под ваши требования.",
+      "productImage": "Изображение товара",
+      "viewProduct": "Смотреть товар",
+      "products": [
+        {
+          "name": "Nordic White Door 80cm",
+          "price": "$349",
+          "detail": "Тонкая рама · Для квартир"
+        },
+        {
+          "name": "Compact Studio Door",
+          "price": "$429",
+          "detail": "Матовый белый · Доводчик"
+        },
+        {
+          "name": "Sliding Door Kit",
+          "price": "$489",
+          "detail": "Экономия места · До $500"
+        }
+      ]
+    },
+    "features": {
+      "title": "Создано для продавцов WooCommerce",
+      "subtitle": "Shoppio добавляет AI-покупки в ваш каталог — с возможностью развивать сценарии в будущем.",
+      "items": [
+        {
+          "title": "AI-поиск товаров",
+          "description": "Покупатели описывают потребность обычными словами."
+        },
+        {
+          "title": "Поиск на естественном языке",
+          "description": "Находите товары по намерению, бюджету и предпочтениям."
+        },
+        {
+          "title": "Рекомендации",
+          "description": "Показывайте подходящие варианты из каталога WooCommerce."
+        },
+        {
+          "title": "Интеграция с WooCommerce",
+          "description": "Подключите магазин через плагин Shoppio для WordPress."
+        },
+        {
+          "title": "Диалоговые покупки",
+          "description": "Ведите покупателя вопросами вместо фильтров."
+        },
+        {
+          "title": "Сравнение товаров",
+          "description": "Помогайте выбирать между вариантами бок о бок."
+        }
+      ]
+    },
+    "howItWorks": {
+      "title": "Как это работает",
+      "subtitle": "От аккаунта {name} до работающего помощника {product} — несколько простых шагов.",
+      "steps": [
+        {
+          "title": "Создайте аккаунт {name}",
+          "description": "Зарегистрируйтесь и установите плагин {product} для WordPress."
+        },
+        {
+          "title": "Подключите магазин WooCommerce",
+          "description": "Безопасная связь с магазином — учётные данные остаются на вашем сайте."
+        },
+        {
+          "title": "Синхронизируйте каталог",
+          "description": "Загрузите товары из WooCommerce, чтобы помощник мог их рекомендовать."
+        },
+        {
+          "title": "Покупки через диалог",
+          "description": "Опубликуйте {product} и помогайте посетителям быстрее находить товары."
+        }
+      ]
+    },
+    "pricingPreview": {
+      "title": "Простые тарифы для любого магазина",
+      "subtitle": "Начните бесплатно и переходите на более высокий план, когда понадобятся сайты, товары или AI-сообщения."
+    },
+    "finalCta": {
+      "title": "Готовы добавить {product} в магазин WooCommerce?",
+      "body": "Создайте аккаунт {name}, подключите магазин и запуститесь за несколько минут."
+    },
+    "docs": {
+      "title": "Документация",
+      "intro": "Полная документация скоро появится. Пока — краткий путь к запуску {product}.",
+      "step1Title": "1. Создайте аккаунт {name}",
+      "step1Body": "Зарегистрируйтесь в {name} и пройдите пошаговое подключение первого магазина с {product}.",
+      "step2Title": "2. Установите плагин {product} для WordPress",
+      "step2Body": "Установите {product} на сайт WooCommerce и подключите магазин по инструкциям из онбординга. Секреты API остаются на сервере WordPress — не в браузере.",
+      "step3Title": "3. Синхронизация товаров",
+      "step3Body": "После подключения {product} синхронизирует каталог, чтобы помощник на витрине рекомендовал реальные товары с ценами и изображениями."
+    },
+    "pricing": {
+      "title": "Тарифы",
+      "subtitle": "Выберите план под ваш магазин WooCommerce. Цены и лимиты берутся из аккаунта Shoppio.",
+      "monthlyBilling": "Ежемесячная оплата",
+      "annualBilling": "Ежегодная оплата",
+      "annualUnavailableTitle": "Годовая оплата пока недоступна",
+      "annualUnavailableBody": "Ниже указаны текущие ежемесячные тарифы. Годовая оплата будет использовать тот же каталог планов, когда её включат.",
+      "featureComparison": "Сравнение возможностей",
+      "startFree": "Начать бесплатно",
+      "choosePlan": "Выбрать {name}"
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "Вход",
+      "description": "Войдите в панель Sellrico.",
+      "email": "Email",
+      "password": "Пароль",
+      "forgotPassword": "Забыли пароль?",
+      "submit": "Войти",
+      "noAccount": "Нет аккаунта?",
+      "signedInTitle": "Вы вошли в систему",
+      "signedInDescription": "Перейдите в панель Sellrico.",
+      "welcomeBack": "С возвращением"
+    },
+    "signup": {
+      "title": "Создайте аккаунт",
+      "description": "Создайте аккаунт Sellrico — мы проведём вас через подключение WooCommerce к Shoppio.",
+      "name": "Имя",
+      "email": "Email",
+      "password": "Пароль",
+      "submit": "Зарегистрироваться",
+      "haveAccount": "Уже есть аккаунт?",
+      "accountCreated": "Аккаунт создан",
+      "signedInTitle": "Вы вошли в систему",
+      "signedInDescription": "Перейдите в панель Sellrico."
+    },
+    "forgot": {
+      "title": "Сброс пароля",
+      "description": "Введите email — мы отправим инструкции, если аккаунт существует.",
+      "email": "Email",
+      "submit": "Отправить ссылку",
+      "sent": "Если аккаунт с адресом {email} существует, вы скоро получите письмо.",
+      "checkEmail": "Проверьте почту",
+      "backToLogin": "Вернуться ко входу"
+    }
+  },
+  "onboarding": {
+    "title": "Добро пожаловать в Sellrico",
+    "storeUrlTitle": "Укажите URL магазина",
+    "storeUrlLabel": "URL магазина WooCommerce",
+    "storeUrlPlaceholder": "http://localhost/wordpress",
+    "storeUrlError": "Введите корректный URL, например https://mystore.com или http://localhost/wordpress",
+    "connectTitle": "Установка и подключение плагина",
+    "connectHint": "Введите код подключения в WordPress (Настройки → Shoppio) с базовым URL API https://api.sellrico.com, затем нажмите кнопку ниже для подтверждения.",
+    "back": "Назад",
+    "confirmConnection": "Плагин установлен",
+    "busy": "Подождите…"
+  },
+  "dashboard": {
+    "shell": {
+      "openNavigation": "Открыть навигацию"
+    },
+    "overview": {
+      "title": "Обзор",
+      "description": "Ключевые показатели — как Shoppio работает для ваших магазинов.",
+      "connectedSites": "Подключённые сайты",
+      "productsSynced": "Синхронизировано товаров",
+      "conversations": "Диалоги",
+      "plan": "Тариф",
+      "upgrade": "Улучшить план",
+      "recentActivity": "Недавняя активность",
+      "emptyActivityTitle": "Активности пока нет",
+      "emptyActivityDescription": "Когда покупатели общаются с Shoppio или вы синхронизируете товары, обновления появятся здесь.",
+      "viewSites": "Смотреть сайты",
+      "viewBilling": "Смотреть оплату",
+      "viewProducts": "Смотреть товары",
+      "viewAssistant": "Смотреть помощника"
+    },
+    "sites": {
+      "title": "Сайты",
+      "description": "Управление подключёнными магазинами WooCommerce. В одном аккаунте Sellrico может быть несколько сайтов Shoppio.",
+      "addSite": "Добавить сайт",
+      "emptyTitle": "Нет подключённых сайтов",
+      "emptyDescription": "Добавьте магазин WooCommerce, чтобы установить Shoppio и синхронизировать товары.",
+      "statusConnected": "Подключён",
+      "statusPending": "Ожидание",
+      "statusError": "Ошибка",
+      "openSite": "Открыть сайт",
+      "detailTitle": "Сайт",
+      "backToSites": "К списку сайтов",
+      "connection": "Подключение",
+      "connectionDescription": "Статус и данные синхронизации этого магазина.",
+      "status": "Статус",
+      "siteStatus": "Статус сайта",
+      "productsCount": "Товары",
+      "lastSync": "Последняя синхронизация",
+      "neverSynced": "Никогда"
+    },
+    "products": {
+      "title": "Товары",
+      "description": "Товары WooCommerce, синхронизированные через Shoppio. Исключения доступны на любом тарифе.",
+      "emptyTitle": "Товары не синхронизированы",
+      "emptyDescription": "Подключите магазин и запустите синхронизацию, чтобы увидеть каталог здесь.",
+      "searchPlaceholder": "Поиск товаров…",
+      "categoryAll": "Все категории",
+      "syncStatus": "Статус синхронизации"
+    },
+    "assistant": {
+      "title": "AI-помощник",
+      "description": "Настройте, как помощник выглядит и общается на витрине."
+    },
+    "usage": {
+      "title": "Использование",
+      "description": "Использование за текущий расчётный период."
+    },
+    "analytics": {
+      "title": "Аналитика",
+      "description": "Что входит в ваш тариф. Подробные отчёты будут опираться на эти возможности.",
+      "comingSoon": "Подробная аналитика скоро появится."
+    },
+    "billing": {
+      "title": "Оплата",
+      "description": "Управление тарифом и подпиской.",
+      "currentPlan": "Текущий тариф",
+      "manageBilling": "Управление оплатой",
+      "viewPlans": "Смотреть тарифы",
+      "upgrade": "Улучшить план",
+      "availableOn": "Доступно на тарифе {plan}",
+      "limitReached": "Лимит достигнут",
+      "almostAtLimit": "Почти у лимита"
+    },
+    "settings": {
+      "title": "Настройки",
+      "description": "Аккаунт и безопасность.",
+      "profile": "Данные аккаунта",
+      "profileDescription": "Измените имя и email.",
+      "password": "Пароль",
+      "passwordDescription": "Смените пароль.",
+      "notifications": "Уведомления",
+      "notificationsDescription": "Выберите, какие письма получать.",
+      "notifyProduct": "Обновления продукта и советы",
+      "notifyBilling": "Оплата и подписка",
+      "dangerZone": "Опасная зона",
+      "dangerDescription": "Безвозвратно удалить аккаунт Sellrico и связанные данные.",
+      "deleteAccount": "Удалить аккаунт",
+      "deleteConfirm": "Удалить аккаунт Sellrico? Это действие нельзя отменить.",
+      "profileUpdated": "Профиль обновлён",
+      "passwordUpdated": "Пароль обновлён",
+      "accountDeleted": "Аккаунт удалён",
+      "currentPassword": "Текущий пароль",
+      "newPassword": "Новый пароль",
+      "saveProfile": "Сохранить профиль",
+      "updatePassword": "Обновить пароль"
+    }
+  },
+  "errors": {
+    "somethingWentWrong": "Что-то пошло не так",
+    "tryAgainContact": "Попробуйте ещё раз. Если проблема сохраняется, напишите в поддержку.",
+    "invalidCredentials": "Неверный email или пароль.",
+    "emailTaken": "Аккаунт с таким email уже существует.",
+    "signInRequired": "Войдите, чтобы продолжить.",
+    "permissionDenied": "У вас нет прав для этого действия.",
+    "notFound": "Мы не нашли то, что вы искали.",
+    "serverError": "Ошибка на нашей стороне. Попробуйте ещё раз.",
+    "generic": "Что-то пошло не так. Попробуйте ещё раз.",
+    "notConnected": "Магазин ещё не подключён. Завершите подключение плагина и повторите попытку.",
+    "conflict": "Конфликт — попробуйте ещё раз."
+  },
+  "pageStates": {
+    "errorTitle": "Что-то пошло не так",
+    "errorDescription": "Попробуйте ещё раз. Если проблема сохраняется, напишите в поддержку.",
+    "tryAgain": "Повторить",
+    "loading": "Загрузка"
+  }
+}

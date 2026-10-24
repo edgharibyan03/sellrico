@@ -1,0 +1,336 @@
+{
+  "meta": {
+    "title": "{name} — {tagline}",
+    "tagline": "Commerce tools for modern stores",
+    "description": "{name} builds products for online merchants. {product} is our AI shopping assistant for WooCommerce — help customers discover products and shop through conversation."
+  },
+  "common": {
+    "getStarted": "Get started",
+    "logIn": "Log in",
+    "signUp": "Sign up",
+    "goToDashboard": "Go to dashboard",
+    "logOut": "Log out",
+    "backToHome": "Back to home",
+    "tryAgain": "Try again",
+    "loading": "Loading",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "continue": "Continue",
+    "back": "Back",
+    "next": "Next",
+    "openMenu": "Open menu",
+    "navigation": "Navigation",
+    "popular": "Popular",
+    "monthly": "Monthly",
+    "annual": "Annual",
+    "perMonth": "/ month",
+    "comparePlans": "Compare plans",
+    "viewPricing": "View pricing",
+    "seeHowItWorks": "See how it works",
+    "language": "Language",
+    "languageRu": "Русский",
+    "languageEn": "English",
+    "included": "Included",
+    "notIncluded": "Not included"
+  },
+  "nav": {
+    "howItWorks": "How it works",
+    "pricing": "Pricing",
+    "docs": "Docs",
+    "overview": "Overview",
+    "sites": "Sites",
+    "assistant": "AI Assistant",
+    "products": "Products",
+    "usage": "Usage",
+    "analytics": "Analytics",
+    "billing": "Billing",
+    "settings": "Settings",
+    "product": "Product",
+    "account": "Account",
+    "legal": "Legal",
+    "privacySoon": "Privacy (soon)",
+    "termsSoon": "Terms (soon)",
+    "footerTagline": "Commerce tools for modern stores. Home of Shoppio — AI shopping for WooCommerce."
+  },
+  "marketing": {
+    "hero": {
+      "title": "{name}",
+      "tagline": "Commerce tools for modern stores",
+      "body": "Our first product is {product} — an AI shopping assistant for WooCommerce. Customers ask questions, discover products, and get recommendations through conversation.",
+      "ctaSecondary": "See how it works"
+    },
+    "demo": {
+      "title": "Shopping that feels like a conversation",
+      "subtitle": "A marketing preview of how customers interact with Shoppio on your storefront.",
+      "assistantName": "Shoppio Assistant",
+      "demoConversation": "Demo conversation",
+      "liveBadge": "Live on your store",
+      "userMessage": "I need a white door for a small apartment under $500.",
+      "assistantReply": "Sure. Here are a few options that fit your requirements.",
+      "productImage": "Product image",
+      "viewProduct": "View product",
+      "products": [
+        {
+          "name": "Nordic White Door 80cm",
+          "price": "$349",
+          "detail": "Slim frame · Fits apartments"
+        },
+        {
+          "name": "Compact Studio Door",
+          "price": "$429",
+          "detail": "Matte white · Soft-close"
+        },
+        {
+          "name": "Sliding Door Kit",
+          "price": "$489",
+          "detail": "Space-saver · Under $500"
+        }
+      ]
+    },
+    "features": {
+      "title": "Built for WooCommerce merchants",
+      "subtitle": "Shoppio brings AI-assisted shopping to your catalog — with room to grow into future shopping actions.",
+      "items": [
+        {
+          "title": "AI product discovery",
+          "description": "Customers describe what they need in plain language."
+        },
+        {
+          "title": "Natural language search",
+          "description": "Find products by intent, budget, and preferences."
+        },
+        {
+          "title": "Recommendations",
+          "description": "Surface relevant options from your WooCommerce catalog."
+        },
+        {
+          "title": "WooCommerce integration",
+          "description": "Connect your store with the Shoppio WordPress plugin."
+        },
+        {
+          "title": "Conversational shopping",
+          "description": "Guide shoppers through questions instead of filters."
+        },
+        {
+          "title": "Product comparison",
+          "description": "Help customers weigh options side by side."
+        }
+      ]
+    },
+    "howItWorks": {
+      "title": "How it works",
+      "subtitle": "From a {name} account to a live {product} assistant in a few guided steps.",
+      "steps": [
+        {
+          "title": "Create a {name} account",
+          "description": "Sign up, then install the {product} WordPress plugin."
+        },
+        {
+          "title": "Connect your WooCommerce store",
+          "description": "Link your store securely — credentials stay on your site."
+        },
+        {
+          "title": "Sync your catalog",
+          "description": "Pull products from WooCommerce so the assistant can recommend them."
+        },
+        {
+          "title": "Let customers shop through conversation",
+          "description": "Publish {product} and help visitors find products faster."
+        }
+      ]
+    },
+    "pricingPreview": {
+      "title": "Simple plans for every store",
+      "subtitle": "Start free, then upgrade when you need more sites, products, or AI messages."
+    },
+    "finalCta": {
+      "title": "Ready to add {product} to your WooCommerce store?",
+      "body": "Create your {name} account, connect your store, and go live in minutes."
+    },
+    "docs": {
+      "title": "Documentation",
+      "intro": "Full documentation is coming soon. For now, here is the essential path to get {product} running.",
+      "step1Title": "1. Create a {name} account",
+      "step1Body": "Sign up for {name} and follow the guided onboarding to connect your first store with {product}.",
+      "step2Title": "2. Install the {product} WordPress plugin",
+      "step2Body": "Install {product} on your WooCommerce site, then connect using the instructions shown during onboarding. API secrets stay on your WordPress server — never in the browser.",
+      "step3Title": "3. Sync products",
+      "step3Body": "Once connected, {product} syncs your catalog so the storefront assistant can recommend real products with prices and images."
+    },
+    "pricing": {
+      "title": "Pricing",
+      "subtitle": "Choose a plan that fits your WooCommerce store. Prices and limits come from your Shoppio account.",
+      "monthlyBilling": "Monthly billing",
+      "annualBilling": "Annual billing",
+      "annualUnavailableTitle": "Annual billing is not available yet",
+      "annualUnavailableBody": "Monthly prices below are the current plans. Annual billing will use the same plan catalog once it is enabled.",
+      "featureComparison": "Feature comparison",
+      "startFree": "Start free",
+      "choosePlan": "Choose {name}"
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "Log in",
+      "description": "Access your Sellrico dashboard.",
+      "email": "Email",
+      "password": "Password",
+      "forgotPassword": "Forgot password?",
+      "submit": "Log in",
+      "noAccount": "No account?",
+      "signedInTitle": "You are signed in",
+      "signedInDescription": "Continue to your Sellrico dashboard.",
+      "welcomeBack": "Welcome back"
+    },
+    "signup": {
+      "title": "Create your account",
+      "description": "Create your Sellrico account — we will guide you through connecting WooCommerce with Shoppio.",
+      "name": "Name",
+      "email": "Email",
+      "password": "Password",
+      "submit": "Sign up",
+      "haveAccount": "Already have an account?",
+      "accountCreated": "Account created",
+      "signedInTitle": "You are signed in",
+      "signedInDescription": "Continue to your Sellrico dashboard."
+    },
+    "forgot": {
+      "title": "Reset password",
+      "description": "Enter your email and we will send reset instructions if an account exists.",
+      "email": "Email",
+      "submit": "Send reset link",
+      "sent": "If an account exists for {email}, you will receive an email shortly.",
+      "checkEmail": "Check your email",
+      "backToLogin": "Back to log in"
+    }
+  },
+  "onboarding": {
+    "title": "Welcome to Sellrico",
+    "storeUrlTitle": "Enter your store URL",
+    "storeUrlLabel": "WooCommerce store URL",
+    "storeUrlPlaceholder": "http://localhost/wordpress",
+    "storeUrlError": "Enter a valid store URL, like https://mystore.com or http://localhost/wordpress",
+    "connectTitle": "Install & connect the plugin",
+    "connectHint": "Use the connect code in WordPress (Settings → Shoppio) with API base URL https://api.sellrico.com, then click the button below to confirm.",
+    "back": "Back",
+    "confirmConnection": "I've installed the plugin",
+    "busy": "Please wait…"
+  },
+  "dashboard": {
+    "shell": {
+      "openNavigation": "Open navigation"
+    },
+    "overview": {
+      "title": "Overview",
+      "description": "Key stats so you can see how Shoppio is working for your stores.",
+      "connectedSites": "Connected sites",
+      "productsSynced": "Products synced",
+      "conversations": "Conversations",
+      "plan": "Plan",
+      "upgrade": "Upgrade",
+      "recentActivity": "Recent activity",
+      "emptyActivityTitle": "No activity yet",
+      "emptyActivityDescription": "When customers chat with Shoppio or you sync products, updates will show up here.",
+      "viewSites": "View sites",
+      "viewBilling": "View billing",
+      "viewProducts": "View products",
+      "viewAssistant": "View assistant"
+    },
+    "sites": {
+      "title": "Sites",
+      "description": "Manage connected WooCommerce stores. One Sellrico account can include multiple Shoppio sites.",
+      "addSite": "Add site",
+      "emptyTitle": "No sites connected",
+      "emptyDescription": "Add your WooCommerce store to install Shoppio and sync products.",
+      "statusConnected": "Connected",
+      "statusPending": "Pending",
+      "statusError": "Error",
+      "openSite": "Open site",
+      "detailTitle": "Site",
+      "backToSites": "Back to sites",
+      "connection": "Connection",
+      "connectionDescription": "Status and sync details for this store.",
+      "status": "Status",
+      "siteStatus": "Site status",
+      "productsCount": "Products",
+      "lastSync": "Last sync",
+      "neverSynced": "Never"
+    },
+    "products": {
+      "title": "Products",
+      "description": "WooCommerce products synced through Shoppio. Exclusions stay available on every plan.",
+      "emptyTitle": "No products synced",
+      "emptyDescription": "Connect a store and run a sync to see your catalog here.",
+      "searchPlaceholder": "Search products…",
+      "categoryAll": "All categories",
+      "syncStatus": "Sync status"
+    },
+    "assistant": {
+      "title": "AI Assistant",
+      "description": "Configure how your assistant appears and speaks on your storefront."
+    },
+    "usage": {
+      "title": "Usage",
+      "description": "Usage for the current billing period."
+    },
+    "analytics": {
+      "title": "Analytics",
+      "description": "See what your plan includes. Detailed reporting will build on these entitlements.",
+      "comingSoon": "Detailed analytics are coming soon."
+    },
+    "billing": {
+      "title": "Billing",
+      "description": "Manage your plan and subscription.",
+      "currentPlan": "Current plan",
+      "manageBilling": "Manage billing",
+      "viewPlans": "View plans",
+      "upgrade": "Upgrade",
+      "availableOn": "Available on {plan}",
+      "limitReached": "Limit reached",
+      "almostAtLimit": "Almost at the limit"
+    },
+    "settings": {
+      "title": "Settings",
+      "description": "Account and security preferences.",
+      "profile": "Account information",
+      "profileDescription": "Update your name and email.",
+      "password": "Password",
+      "passwordDescription": "Change your password.",
+      "notifications": "Notifications",
+      "notificationsDescription": "Choose which emails you receive.",
+      "notifyProduct": "Product updates and tips",
+      "notifyBilling": "Billing and subscription",
+      "dangerZone": "Danger zone",
+      "dangerDescription": "Permanently delete your Sellrico account and connected data.",
+      "deleteAccount": "Delete account",
+      "deleteConfirm": "Delete your Sellrico account? This cannot be undone.",
+      "profileUpdated": "Profile updated",
+      "passwordUpdated": "Password updated",
+      "accountDeleted": "Account deleted",
+      "currentPassword": "Current password",
+      "newPassword": "New password",
+      "saveProfile": "Save profile",
+      "updatePassword": "Update password"
+    }
+  },
+  "errors": {
+    "somethingWentWrong": "Something went wrong",
+    "tryAgainContact": "Please try again. If the problem continues, contact support.",
+    "invalidCredentials": "Invalid email or password.",
+    "emailTaken": "An account with this email already exists.",
+    "signInRequired": "Please sign in to continue.",
+    "permissionDenied": "You do not have permission to do that.",
+    "notFound": "We could not find what you were looking for.",
+    "serverError": "Something went wrong on our side. Please try again.",
+    "generic": "Something went wrong. Please try again.",
+    "notConnected": "Store is not connected yet. Finish the plugin connection, then try again.",
+    "conflict": "Conflict — please try again."
+  },
+  "pageStates": {
+    "errorTitle": "Something went wrong",
+    "errorDescription": "Please try again. If the problem continues, contact support.",
+    "tryAgain": "Try again",
+    "loading": "Loading"
+  }
+}
