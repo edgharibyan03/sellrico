@@ -15,13 +15,16 @@ echo "Building and starting sellrico-web..."
 docker compose -f docker-compose.prod.yml up -d --build
 
 echo "Waiting for web..."
-for i in $(seq 1 30); do
-  if curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:3001/ | grep -q '200'; then
-    echo "web:200"
+# After i18n, "/" redirects to "/ru" — probe the locale path for a real 200.
+for i in $(seq 1 45); do
+  code="$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:3001/ru || true)"
+  if [[ "$code" == "200" ]]; then
+    echo "web:${code}"
     docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' | grep -E 'NAMES|sellrico-web' || true
     echo "Web deploy done."
     exit 0
   fi
+  echo "attempt ${i}: HTTP ${code:-000}"
   sleep 2
 done
 
