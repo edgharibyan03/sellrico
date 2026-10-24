@@ -37,9 +37,21 @@ const navItems = [
   { href: "/dashboard/assistant", labelKey: "assistant" as const, icon: Bot },
   { href: "/dashboard/products", labelKey: "products" as const, icon: Package },
   { href: "/dashboard/usage", labelKey: "usage" as const, icon: Gauge },
-  { href: "/dashboard/analytics", labelKey: "analytics" as const, icon: BarChart3 },
-  { href: "/dashboard/billing", labelKey: "billing" as const, icon: CreditCard },
-  { href: "/dashboard/settings", labelKey: "settings" as const, icon: Settings },
+  {
+    href: "/dashboard/analytics",
+    labelKey: "analytics" as const,
+    icon: BarChart3,
+  },
+  {
+    href: "/dashboard/billing",
+    labelKey: "billing" as const,
+    icon: CreditCard,
+  },
+  {
+    href: "/dashboard/settings",
+    labelKey: "settings" as const,
+    icon: Settings,
+  },
 ];
 
 function NavLinks({
@@ -149,7 +161,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         <Logo href="/dashboard" showProduct className="mb-6" />
         <NavLinks pathname={pathname} labels={navLabels} />
         <div className="mt-auto flex flex-col gap-3 pt-6">
-          <LanguageSwitcher className="w-full justify-center" />
+          <LanguageSwitcher className="justify-center" />
           <Separator />
           <div className="px-1">
             <p className="truncate text-sm font-medium">{user?.name}</p>
