@@ -1,58 +1,56 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { useEffect, useState } from "react"
-import {
-  Bot,
-  CreditCard,
-  MessageSquare,
-  Package,
-  Store,
-} from "lucide-react"
-import { buttonVariants } from "@/components/ui/button"
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { Bot, CreditCard, MessageSquare, Package, Store } from "lucide-react";
+import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
+} from "@/components/ui/card";
 import {
   EmptyState,
   ErrorState,
   LoadingBlock,
   PageHeader,
-} from "@/components/shared/page-states"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Badge } from "@/components/ui/badge"
-import { getActivity, getOverview } from "@/lib/api/dashboard"
-import { getUserFacingError } from "@/lib/api/client"
-import { getPlan } from "@/lib/config/pricing"
-import type { ActivityItem, OverviewStats } from "@/lib/types"
+} from "@/components/shared/page-states";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { UpgradePrompt, UsageMeter } from "@/components/billing/plan-states";
+import { getActivity, getOverview } from "@/lib/api/dashboard";
+import { getUserFacingError } from "@/lib/api/client";
+import { formatMoney } from "@/lib/config/pricing";
+import type { ActivityItem, OverviewStats } from "@/lib/types";
 
 export default function OverviewPage() {
-  const [stats, setStats] = useState<OverviewStats | null>(null)
-  const [activity, setActivity] = useState<ActivityItem[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [stats, setStats] = useState<OverviewStats | null>(null);
+  const [activity, setActivity] = useState<ActivityItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   async function load() {
-    setLoading(true)
-    setError(null)
+    setLoading(true);
+    setError(null);
     try {
-      const [overview, acts] = await Promise.all([getOverview(), getActivity()])
-      setStats(overview)
-      setActivity(acts)
+      const [overview, acts] = await Promise.all([
+        getOverview(),
+        getActivity(),
+      ]);
+      setStats(overview);
+      setActivity(acts);
     } catch (err) {
-      setError(getUserFacingError(err))
+      setError(getUserFacingError(err));
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
   useEffect(() => {
-    void load()
-  }, [])
+    void load();
+  }, []);
 
   if (loading) {
     return (
@@ -63,23 +61,28 @@ export default function OverviewPage() {
         />
         <LoadingBlock rows={5} />
       </div>
-    )
+    );
   }
 
   if (error || !stats) {
     return (
       <div className="flex flex-col gap-6">
         <PageHeader title="Overview" />
-        <ErrorState description={error ?? undefined} onRetry={() => void load()} />
+        <ErrorState
+          description={error ?? undefined}
+          onRetry={() => void load()}
+        />
       </div>
-    )
+    );
   }
 
-  const plan = getPlan(stats.planId)
-  const usagePct =
-    stats.aiMessagesLimit && stats.aiMessagesLimit > 0
-      ? Math.min(100, Math.round((stats.aiMessagesUsed / stats.aiMessagesLimit) * 100))
-      : null
+  const planName = stats.planName ?? stats.planId;
+  const sitesUsed = stats.sitesUsed ?? stats.connectedSites;
+  const aiReached =
+    stats.aiMessagesLimit != null &&
+    stats.aiMessagesUsed >= stats.aiMessagesLimit;
+  const sitesOver = stats.overLimit?.sites;
+  const productsOver = stats.overLimit?.products;
 
   return (
     <div className="flex flex-col gap-6">
@@ -87,6 +90,49 @@ export default function OverviewPage() {
         title="Overview"
         description="Key stats so you can see how Shoppio is working for your stores."
       />
+
+      {stats.paymentPending ? (
+        <Alert>
+          <AlertTitle>Payment pending</AlertTitle>
+          <AlertDescription>
+            Your last payment is still pending. Paid features stay available
+            until the current period ends.
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
+      {stats.subscriptionStatus === "canceled" ||
+      stats.subscriptionStatus === "expired" ? (
+        <Alert>
+          <AlertTitle>Subscription {stats.subscriptionStatus}</AlertTitle>
+          <AlertDescription>
+            {stats.accessRestricted
+              ? "Paid features have ended. You are on the Free plan limits. Existing sites, products, and conversations are still here."
+              : "This subscription is set to end. Paid features remain until the current period finishes."}
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
+      {sitesOver ? (
+        <UpgradePrompt
+          title="Plan limit exceeded"
+          description={`Current: ${sitesUsed.toLocaleString()} sites. ${planName} limit: ${(stats.sitesLimit ?? 0).toLocaleString()} sites. Please remove sites or upgrade your plan.`}
+        />
+      ) : null}
+
+      {productsOver ? (
+        <UpgradePrompt
+          title="Plan limit exceeded"
+          description={`Current: ${stats.productsSynced.toLocaleString()} products. ${planName} limit: ${(stats.productsLimit ?? 0).toLocaleString()} products. Existing products stay indexed. New products will not sync until you are within the limit or upgrade.`}
+        />
+      ) : null}
+
+      {aiReached ? (
+        <UpgradePrompt
+          title="You've reached your AI message limit."
+          description={`Your ${planName} plan includes ${(stats.aiMessagesLimit ?? 0).toLocaleString()} AI messages per month. Upgrade your plan to continue using the AI assistant.`}
+        />
+      ) : null}
 
       {!stats.onboardingCompleted ? (
         <Alert>
@@ -104,32 +150,58 @@ export default function OverviewPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Current plan</CardDescription>
-            <CardTitle className="text-2xl">{plan.name}</CardTitle>
+            <CardTitle className="text-2xl capitalize">{planName}</CardTitle>
           </CardHeader>
-          <CardContent>
-            <Link href="/dashboard/billing" className="text-sm text-primary hover:underline">
+          <CardContent className="flex flex-col gap-2">
+            <p className="text-sm text-muted-foreground">
+              {formatMoney(stats.priceMonthly ?? null, stats.currency)} / month
+            </p>
+            <Link
+              href="/dashboard/billing"
+              className="text-sm text-primary hover:underline"
+            >
               Manage billing
             </Link>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Connected sites</CardDescription>
-            <CardTitle className="text-2xl">{stats.connectedSites}</CardTitle>
+            <CardDescription>Sites</CardDescription>
+            <CardTitle className="text-2xl">
+              {sitesUsed.toLocaleString()}
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <Link href="/dashboard/sites" className="text-sm text-primary hover:underline">
+            <UsageMeter
+              label="Plan limit"
+              used={sitesUsed}
+              limit={stats.sitesLimit}
+            />
+            <Link
+              href="/dashboard/sites"
+              className="mt-3 inline-block text-sm text-primary hover:underline"
+            >
               View sites
             </Link>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Products synced</CardDescription>
-            <CardTitle className="text-2xl">{stats.productsSynced.toLocaleString()}</CardTitle>
+            <CardDescription>Products</CardDescription>
+            <CardTitle className="text-2xl">
+              {stats.productsSynced.toLocaleString()}
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <Link href="/dashboard/products" className="text-sm text-primary hover:underline">
+            <UsageMeter
+              label="Synced into Shoppio"
+              used={stats.productsSynced}
+              limit={stats.productsLimit}
+            />
+            <Link
+              href="/dashboard/products"
+              className="mt-3 inline-block text-sm text-primary hover:underline"
+            >
               View products
             </Link>
           </CardContent>
@@ -139,22 +211,18 @@ export default function OverviewPage() {
             <CardDescription>AI messages this month</CardDescription>
             <CardTitle className="text-2xl">
               {stats.aiMessagesUsed.toLocaleString()}
-              <span className="text-base font-normal text-muted-foreground">
-                {" "}
-                / {stats.aiMessagesLimit?.toLocaleString() ?? "∞"}
-              </span>
             </CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-2">
-            {usagePct != null ? (
-              <div className="h-2 overflow-hidden rounded-full bg-muted">
-                <div
-                  className="h-full rounded-full bg-primary transition-all"
-                  style={{ width: `${usagePct}%` }}
-                />
-              </div>
-            ) : null}
-            <Link href="/dashboard/usage" className="text-sm text-primary hover:underline">
+            <UsageMeter
+              label="Billing period"
+              used={stats.aiMessagesUsed}
+              limit={stats.aiMessagesLimit}
+            />
+            <Link
+              href="/dashboard/usage"
+              className="text-sm text-primary hover:underline"
+            >
               View usage
             </Link>
           </CardContent>
@@ -206,9 +274,13 @@ export default function OverviewPage() {
                   >
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-sm font-medium">{item.title}</p>
-                      <Badge variant="secondary">{item.type.replaceAll("_", " ")}</Badge>
+                      <Badge variant="secondary">
+                        {item.type.replaceAll("_", " ")}
+                      </Badge>
                     </div>
-                    <p className="text-sm text-muted-foreground">{item.description}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {item.description}
+                    </p>
                     <p className="text-xs text-muted-foreground">
                       {new Date(item.createdAt).toLocaleString()}
                     </p>
@@ -227,35 +299,50 @@ export default function OverviewPage() {
           <CardContent className="flex flex-col gap-2">
             <Link
               href="/dashboard/sites"
-              className={buttonVariants({ variant: "outline", className: "justify-start" })}
+              className={buttonVariants({
+                variant: "outline",
+                className: "justify-start",
+              })}
             >
               <Store data-icon="inline-start" />
               Connect store
             </Link>
             <Link
               href="/dashboard/assistant"
-              className={buttonVariants({ variant: "outline", className: "justify-start" })}
+              className={buttonVariants({
+                variant: "outline",
+                className: "justify-start",
+              })}
             >
               <Bot data-icon="inline-start" />
               Configure assistant
             </Link>
             <Link
               href="/dashboard/products"
-              className={buttonVariants({ variant: "outline", className: "justify-start" })}
+              className={buttonVariants({
+                variant: "outline",
+                className: "justify-start",
+              })}
             >
               <Package data-icon="inline-start" />
               View products
             </Link>
             <Link
               href="/dashboard/usage"
-              className={buttonVariants({ variant: "outline", className: "justify-start" })}
+              className={buttonVariants({
+                variant: "outline",
+                className: "justify-start",
+              })}
             >
               <MessageSquare data-icon="inline-start" />
               Check AI usage
             </Link>
             <Link
               href="/dashboard/billing"
-              className={buttonVariants({ variant: "outline", className: "justify-start" })}
+              className={buttonVariants({
+                variant: "outline",
+                className: "justify-start",
+              })}
             >
               <CreditCard data-icon="inline-start" />
               Manage subscription
@@ -264,5 +351,5 @@ export default function OverviewPage() {
         </Card>
       </div>
     </div>
-  )
+  );
 }

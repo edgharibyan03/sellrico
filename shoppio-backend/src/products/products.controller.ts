@@ -35,6 +35,20 @@ export class ProductsController {
     return this.productsService.syncFromPlugin(site, dto);
   }
 
+  @Get('categories')
+  @UseGuards(UserAuthGuard)
+  @ApiBearerAuth('user-jwt')
+  @ApiTags('dashboard-products')
+  @ApiOperation({
+    summary: 'List distinct product categories for the merchant dashboard',
+  })
+  categories(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('siteId') siteId?: string,
+  ): Promise<{ categories: string[] }> {
+    return this.productsService.listCategoriesForDashboard(user, { siteId });
+  }
+
   @Get()
   @UseGuards(UserAuthGuard)
   @ApiBearerAuth('user-jwt')
@@ -47,12 +61,14 @@ export class ProductsController {
     @CurrentUser() user: AuthenticatedUser,
     @Query('siteId') siteId?: string,
     @Query('q') q?: string,
+    @Query('category') category?: string,
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page?: number,
     @Query('pageSize', new DefaultValuePipe(8), ParseIntPipe) pageSize?: number,
   ): Promise<PaginatedProductsDto> {
     return this.productsService.listForDashboard(user, {
       siteId,
       q,
+      category,
       page,
       pageSize,
     });

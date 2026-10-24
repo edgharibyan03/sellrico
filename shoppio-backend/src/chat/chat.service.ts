@@ -12,10 +12,13 @@ import { randomUUID } from 'crypto';
 import { AIProviderFactory } from '../ai/factory/ai-provider.factory';
 import { AIProviderError } from '../ai/errors/ai-provider.error';
 import { CatalogToolExecutor, CatalogProductHint } from '../ai/tools/catalog-tool.executor';
+import { pickProductsMentionedInReply } from '../ai/tools/catalog-search.rank';
 import { CATALOG_TOOLS } from '../ai/tools/catalog.tools';
 import { AIMessage } from '../ai/types/ai.types';
+import { AssistantService } from '../assistant/assistant.service';
 import { AuthenticatedSite } from '../common/types/authenticated-site';
 import { PrismaService } from '../prisma/prisma.service';
+import { UsageService } from '../usage/usage.service';
 import { ChatMessageDto } from './dto/chat-message.dto';
 
 export type ChatProductHint = CatalogProductHint;
@@ -35,11 +38,24 @@ export class ChatService {
     private readonly prisma: PrismaService,
     private readonly aiProviderFactory: AIProviderFactory,
     private readonly catalogTools: CatalogToolExecutor,
+    private readonly usage: UsageService,
+    private readonly assistant: AssistantService,
   ) {}
 
-  async handleMessage(
+  async handleMessage(site: AuthenticatedSite, dto: ChatMessageDto): Promise<ChatResponseDto> {
+    const reservation = await this.usage.reserveAiMessage(site);
+    try {
+      return await this.reply(site, dto, reservation);
+    } catch (error) {
+      await this.usage.releaseAiMessage(reservation);
+      throw error;
+    }
+  }
+
+  private async reply(
     site: AuthenticatedSite,
     dto: ChatMessageDto,
+    reservation: Awaited<ReturnType<UsageService['reserveAiMessage']>>,
   ): Promise<ChatResponseDto> {
     const sessionId = dto.sessionId?.trim() || randomUUID();
     const conversation = await this.resolveConversation(site.id, sessionId, dto.conversationId);
@@ -63,11 +79,10 @@ export class ChatService {
     history.reverse();
 
     const provider = await this.aiProviderFactory.getProviderForUser({ siteId: site.id });
+    const assistantSettings = await this.assistant.getForSiteId(site.id);
 
     const messages: AIMessage[] = history.map((m) => ({
-      role: (m.role === MessageRole.ASSISTANT ? 'assistant' : 'user') as
-        | 'user'
-        | 'assistant',
+      role: (m.role === MessageRole.ASSISTANT ? 'assistant' : 'user') as 'user' | 'assistant',
       content: m.content,
     }));
 
@@ -84,15 +99,24 @@ export class ChatService {
     const collectedProducts = new Map<string, ChatProductHint>();
     let reply = '';
     const priceFilters = this.extractPriceFilters(dto.message);
+    const tokenUsage = { inputTokens: 0, outputTokens: 0, totalTokens: 0 };
+    let model: string | null = null;
+    const systemPrompt = this.buildSystemPrompt(site, dto.locale, assistantSettings);
 
     try {
       for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
         const response = await provider.chat({
-          system: this.buildSystemPrompt(site, dto.locale),
+          system: systemPrompt,
           messages,
           tools: CATALOG_TOOLS,
           temperature: 0.2,
         });
+        if (response.usage) {
+          tokenUsage.inputTokens += response.usage.inputTokens;
+          tokenUsage.outputTokens += response.usage.outputTokens;
+          tokenUsage.totalTokens += response.usage.totalTokens;
+        }
+        model = response.model;
 
         if (response.toolCalls.length > 0) {
           messages.push({
@@ -139,16 +163,17 @@ export class ChatService {
     }
 
     if (!reply) {
-      reply =
-        'Sorry — I could not generate a reply right now. Please try again in a moment.';
+      reply = 'Sorry — I could not generate a reply right now. Please try again in a moment.';
     }
 
-    // Guarantee product cards (with images) for catalog-style questions even if the model skipped tools.
+    // Guarantee product cards for catalog-style questions even if the model skipped tools.
     if (collectedProducts.size === 0 && this.looksLikeCatalogRequest(dto.message)) {
+      const fallbackQuery = dto.message.trim().slice(0, 120);
       const fallback = await this.catalogTools.execute(site.id, {
-        id: 'fallback_list',
-        name: 'list_products',
+        id: 'fallback_search',
+        name: 'search_products',
         arguments: {
+          query: fallbackQuery,
           limit: 8,
           ...(priceFilters.maxPrice != null ? { maxPrice: priceFilters.maxPrice } : {}),
           ...(priceFilters.minPrice != null ? { minPrice: priceFilters.minPrice } : {}),
@@ -159,7 +184,10 @@ export class ChatService {
       }
     }
 
-    const products = Array.from(collectedProducts.values()).slice(0, 8);
+    const products = this.selectProductsForReply(
+      reply,
+      Array.from(collectedProducts.values()),
+    );
 
     await this.prisma.message.create({
       data: {
@@ -171,6 +199,12 @@ export class ChatService {
           provider: provider.name,
         } as Prisma.InputJsonValue,
       },
+    });
+
+    await this.usage.recordTokenUsage(reservation, {
+      ...tokenUsage,
+      model,
+      provider: provider.name,
     });
 
     await this.prisma.usageEvent.create({
@@ -240,11 +274,7 @@ export class ChatService {
     throw error;
   }
 
-  private async resolveConversation(
-    siteId: string,
-    sessionId: string,
-    conversationId?: string,
-  ) {
+  private async resolveConversation(siteId: string, sessionId: string, conversationId?: string) {
     if (conversationId) {
       const existing = await this.prisma.conversation.findFirst({
         where: { id: conversationId, siteId },
@@ -270,9 +300,42 @@ export class ChatService {
     });
   }
 
+  private selectProductsForReply(
+    reply: string,
+    collected: ChatProductHint[],
+  ): ChatProductHint[] {
+    if (collected.length === 0) {
+      return [];
+    }
+
+    const mentioned = pickProductsMentionedInReply(reply, collected);
+    if (mentioned.length > 0) {
+      return mentioned.slice(0, 8);
+    }
+
+    // If the model listed named products that are not in tool results (hallucination),
+    // do not dump unrelated accessories under the reply.
+    if (this.replyLooksLikeNamedProductList(reply)) {
+      return [];
+    }
+
+    return collected.slice(0, 8);
+  }
+
+  private replyLooksLikeNamedProductList(reply: string): boolean {
+    const lines = reply
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean);
+    const pricedLines = lines.filter((line) =>
+      /(\d[\d\s]{2,}\s*(₽|руб|amd|драм|\$|€))|(от\s+\d)/i.test(line),
+    );
+    return pricedLines.length >= 2;
+  }
+
   private looksLikeCatalogRequest(message: string): boolean {
     const text = message.toLowerCase();
-    return /(товар|каталог|продукт|product|catalog|куп|есть|покаж|список|налич|image|картин|фото|photo|цен|price|драм|amd|бюджет|дешев|дорог|ниже|до\s+\d)/i.test(
+    return /(товар|каталог|продукт|product|catalog|куп|есть|покаж|список|налич|image|картин|фото|photo|цен|price|драм|amd|бюджет|дешев|дорог|ниже|до\s+\d|двер|door)/i.test(
       text,
     );
   }
@@ -301,12 +364,22 @@ export class ChatService {
     };
   }
 
-  private buildSystemPrompt(site: AuthenticatedSite, locale?: string): string {
-    const preferred = this.describeLocale(locale);
+  private buildSystemPrompt(
+    site: AuthenticatedSite,
+    locale: string | undefined,
+    settings: {
+      name: string;
+      language: string;
+      tone: string;
+    },
+  ): string {
+    const preferred = this.describeLocale(locale ?? settings.language);
+    const toneLine = this.describeTone(settings.tone);
     return [
-      'You are Shoppio, a helpful shopping assistant embedded on a WooCommerce storefront chat widget.',
+      `You are ${settings.name}, a helpful shopping assistant embedded on a WooCommerce storefront chat widget.`,
       `Store: ${site.name} (${site.domain}).`,
       preferred,
+      toneLine,
       'If the customer writes in a clear language, answer in that language. Otherwise use the preferred UI language above.',
       '',
       'Turn focus (critical):',
@@ -315,22 +388,56 @@ export class ChatService {
       '- If the latest message is about products, prices, stock, or categories — help with the catalog. Do not bring up weather or other closed topics.',
       '',
       'Catalog tools:',
-      '- For price limits (e.g. “under 6000”), call list_products or search_products with maxPrice/minPrice.',
+      '- For product requests (doors, categories, models), call search_products with the customer keywords.',
+      '- For price limits (e.g. “under 6000”), pass maxPrice/minPrice.',
       '- Always call a catalog tool before claiming what is or is not in stock/price range.',
-      '- Recommend only products returned by tools. Do not invent products or prices.',
+      '- Recommend ONLY products returned by tools in THIS turn.',
+      '- Never invent model names, collections, or prices that are not in the tool results.',
+      '- If tools return accessories (latches, hinges, seals) but the customer asked for doors, say you did not find matching doors — do not invent door models.',
+      '- If the customer asks for межкомнатные doors, do not show входные doors (and vice versa). Prefer a tighter search query like “межкомнатная белая”.',
+      '- When the customer asks to show cards of products you just listed, search/get those exact product names/ids again.',
       '',
-      'Product cards with photos are rendered automatically under your reply by the chat UI.',
-      'Never say you cannot show images — the UI shows them when products are returned.',
-      'Keep the reply short; let the cards carry name, price, and image.',
+      'Product reply format (critical when tools return products):',
+      '- Product cards with photos/prices are rendered by the chat UI between your intro and follow-up.',
+      '- Write ONLY a short intro line, then a blank line, then optionally one short follow-up question.',
+      '- Do NOT list product names, model numbers, prices, bullet lists, or “фото и цены в карточках”.',
+      '- Do NOT repeat what the cards already show.',
+      '- Example:',
+      '  Вот белые межкомнатные двери из каталога:',
+      '',
+      '  Если нужен определённый размер или с остеклением, скажите — подберу точнее.',
       '',
       'Formatting: no markdown (**bold**, [links](url), headings). Plain chat text only.',
     ].join('\n');
   }
 
+  private describeTone(tone: string): string {
+    switch (tone) {
+      case 'professional':
+        return 'Tone: professional, clear, and courteous.';
+      case 'concise':
+        return 'Tone: concise and direct. Keep answers short.';
+      case 'enthusiastic':
+        return 'Tone: enthusiastic and upbeat, without being pushy.';
+      case 'friendly':
+      default:
+        return 'Tone: friendly and helpful.';
+    }
+  }
+
   private describeLocale(locale?: string): string {
     const normalized = (locale ?? '').toLowerCase().split(/[-_]/)[0];
     if (normalized === 'ru' || normalized === 'hy') {
-      return 'Preferred UI language: Russian (visitor appears to be from a Russian/Armenian locale).';
+      return 'Preferred UI language: Russian.';
+    }
+    if (normalized === 'es') {
+      return 'Preferred UI language: Spanish.';
+    }
+    if (normalized === 'fr') {
+      return 'Preferred UI language: French.';
+    }
+    if (normalized === 'de') {
+      return 'Preferred UI language: German.';
     }
     if (normalized === 'en') {
       return 'Preferred UI language: English.';

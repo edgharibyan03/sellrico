@@ -21,6 +21,9 @@ export class ApiExceptionFilter implements ExceptionFilter {
     let code = 'INTERNAL_ERROR';
     let message = 'An unexpected error occurred';
     let details: unknown;
+    const extras: Partial<
+      Pick<ApiErrorResponse['error'], 'upgradeRequired' | 'limit' | 'used' | 'plan'>
+    > = {};
 
     if (exception instanceof HttpException) {
       status = exception.getStatus();
@@ -34,6 +37,18 @@ export class ApiExceptionFilter implements ExceptionFilter {
         message = (body.message as string) || message;
         code = (body.error as string) || (body.code as string) || HttpStatus[status] || code;
         details = body.details;
+        if (typeof body.upgradeRequired === 'boolean') {
+          extras.upgradeRequired = body.upgradeRequired;
+        }
+        if (typeof body.limit === 'number') {
+          extras.limit = body.limit;
+        }
+        if (typeof body.used === 'number') {
+          extras.used = body.used;
+        }
+        if (typeof body.plan === 'string') {
+          extras.plan = body.plan;
+        }
 
         if (Array.isArray(body.message)) {
           message = 'Validation failed';
@@ -42,6 +57,14 @@ export class ApiExceptionFilter implements ExceptionFilter {
         }
       }
     } else if (exception instanceof Error) {
+      if (
+        exception.name === 'PayloadTooLargeError' ||
+        exception.message.toLowerCase().includes('request entity too large')
+      ) {
+        status = HttpStatus.PAYLOAD_TOO_LARGE;
+        code = 'PAYLOAD_TOO_LARGE';
+        message = 'Sync payload is too large. Try syncing fewer products per batch.';
+      }
       this.logger.error(exception.message, exception.stack);
     } else {
       this.logger.error('Unknown exception', String(exception));
@@ -53,6 +76,7 @@ export class ApiExceptionFilter implements ExceptionFilter {
         code: String(code).toUpperCase().replace(/\s+/g, '_'),
         message,
         ...(details !== undefined ? { details } : {}),
+        ...extras,
       },
     };
 

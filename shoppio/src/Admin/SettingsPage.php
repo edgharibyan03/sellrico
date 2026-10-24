@@ -57,6 +57,27 @@ final class SettingsPage {
 			array(),
 			SHOPPIO_VERSION
 		);
+
+		wp_enqueue_script(
+			'shoppio-admin',
+			SHOPPIO_URL . 'assets/js/admin.js',
+			array(),
+			SHOPPIO_VERSION,
+			true
+		);
+
+		wp_localize_script(
+			'shoppio-admin',
+			'ShoppioAdmin',
+			array(
+				'syncUrl'   => esc_url_raw( rest_url( 'shoppio/v1/sync-products' ) ),
+				'restNonce' => wp_create_nonce( 'wp_rest' ),
+				'i18n'      => array(
+					'starting' => __( 'Starting product sync…', 'shoppio' ),
+					'failed'   => __( 'Product sync failed.', 'shoppio' ),
+				),
+			)
+		);
 	}
 
 	public function handle_actions(): void {
@@ -74,18 +95,6 @@ final class SettingsPage {
 			add_settings_error(
 				'shoppio',
 				'shoppio_connect',
-				$result['message'],
-				$result['success'] ? 'success' : 'error'
-			);
-		}
-
-		if ( isset( $_POST['shoppio_sync_products'] ) ) {
-			check_admin_referer( 'shoppio_sync_products' );
-			$result = $this->product_syncer->sync();
-
-			add_settings_error(
-				'shoppio',
-				'shoppio_sync',
 				$result['message'],
 				$result['success'] ? 'success' : 'error'
 			);
@@ -165,12 +174,12 @@ final class SettingsPage {
 									class="regular-text"
 									id="shoppio_api_url"
 									name="shoppio_api_url"
-									value="<?php echo esc_attr( $api_url ?: 'http://localhost:9001' ); ?>"
-									placeholder="http://localhost:9001"
+									value="<?php echo esc_attr( $api_url ?: 'https://api.sellrico.com' ); ?>"
+									placeholder="https://api.sellrico.com"
 									required
 								/>
 								<p class="description">
-									<?php echo esc_html__( 'Origin only (no /api/v1 path), e.g. https://api.shoppio.io', 'shoppio' ); ?>
+									<?php echo esc_html__( 'Origin only (no /api/v1 path), e.g. https://api.sellrico.com', 'shoppio' ); ?>
 								</p>
 							</td>
 						</tr>
@@ -199,18 +208,21 @@ final class SettingsPage {
 			<?php else : ?>
 				<p class="description"><?php echo esc_html__( 'API URL:', 'shoppio' ); ?> <code><?php echo esc_html( $api_url ); ?></code></p>
 
-				<form method="post" style="display:inline-block;margin-right:8px;">
-					<?php wp_nonce_field( 'shoppio_sync_products' ); ?>
-					<?php
-					submit_button(
-						__( 'Sync products', 'shoppio' ),
-						'secondary',
-						'shoppio_sync_products',
-						false,
-						$woo ? array() : array( 'disabled' => 'disabled' )
-					);
-					?>
-				</form>
+				<p>
+					<button
+						type="button"
+						class="button button-secondary"
+						id="shoppio-sync-products"
+						<?php disabled( ! $woo ); ?>
+					>
+						<?php echo esc_html__( 'Sync products', 'shoppio' ); ?>
+					</button>
+				</p>
+				<div
+					id="shoppio-sync-status"
+					class="notice inline"
+					style="display:none;margin:8px 0 16px;padding:8px 12px;"
+				></div>
 
 				<form method="post" style="display:inline-block;">
 					<?php wp_nonce_field( 'shoppio_disconnect' ); ?>

@@ -2,6 +2,12 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AIToolCall } from '../types/ai.types';
+import {
+  distinctiveSearchTokens,
+  expandTokenStems,
+  rankProducts,
+  tokenizeQuery,
+} from './catalog-search.rank';
 
 export interface CatalogProductHint {
   id: string;
@@ -70,39 +76,91 @@ export class CatalogToolExecutor {
     const query = String(args.query ?? '').trim();
     const limit = Math.min(10, Math.max(1, Number(args.limit) || 8));
     const priceWhere = this.priceWhere(args);
-
-    const tokens = query
-      .toLowerCase()
-      .split(/[^a-z0-9а-яё]+/i)
-      .map((t) => t.trim())
-      .filter((t) => t.length >= 2)
-      .slice(0, 6);
+    const tokens = tokenizeQuery(query);
+    const fetchTokens = distinctiveSearchTokens(query);
 
     let rows;
     if (tokens.length === 0) {
       rows = await this.prisma.product.findMany({
         where: { siteId, ...priceWhere },
-        orderBy: [{ price: 'asc' }, { updatedAt: 'desc' }],
+        orderBy: [{ updatedAt: 'desc' }, { price: 'asc' }],
         take: limit,
       });
     } else {
+      // Prefer model/brand tokens for the DB candidate window. Broad OR on
+      // "двери" alone can fill take:N and drop exact names like "Лондон".
+      const candidateLimit = Math.min(120, Math.max(40, limit * 12));
+      const containsAny = (stems: string[]) =>
+        stems.flatMap((stem) => [
+          { name: { contains: stem, mode: 'insensitive' as const } },
+          { description: { contains: stem, mode: 'insensitive' as const } },
+          { category: { contains: stem, mode: 'insensitive' as const } },
+        ]);
+
+      const andWhere =
+        fetchTokens.length > 1
+          ? {
+              AND: fetchTokens.map((token) => ({
+                OR: containsAny(expandTokenStems(token)),
+              })),
+            }
+          : {
+              OR: containsAny(expandTokenStems(fetchTokens[0]!)),
+            };
+
       rows = await this.prisma.product.findMany({
         where: {
           siteId,
           ...priceWhere,
-          OR: tokens.flatMap((token) => [
-            { name: { contains: token, mode: 'insensitive' as const } },
-            { description: { contains: token, mode: 'insensitive' as const } },
-            { category: { contains: token, mode: 'insensitive' as const } },
-          ]),
+          ...andWhere,
         },
-        take: limit,
-        orderBy: [{ price: 'asc' }, { updatedAt: 'desc' }],
+        take: candidateLimit,
       });
+
+      // If AND of several distinctive tokens is too strict, OR them.
+      if (rows.length === 0 && fetchTokens.length > 1) {
+        rows = await this.prisma.product.findMany({
+          where: {
+            siteId,
+            ...priceWhere,
+            OR: fetchTokens.flatMap((token) =>
+              containsAny(expandTokenStems(token)),
+            ),
+          },
+          take: candidateLimit,
+        });
+      }
+
+      // Last resort: include generic tokens (двери) so bare "двери" still works.
+      if (rows.length === 0) {
+        rows = await this.prisma.product.findMany({
+          where: {
+            siteId,
+            ...priceWhere,
+            OR: tokens.flatMap((token) => containsAny(expandTokenStems(token))),
+          },
+          take: candidateLimit,
+        });
+      }
+
+      const ranked = rankProducts(
+        query,
+        rows.map((row) => ({
+          id: row.id,
+          name: row.name,
+          description: row.description,
+          category: row.category,
+          price: row.price != null ? Number(row.price) : null,
+        })),
+        limit,
+      );
+      const byId = new Map(rows.map((row) => [row.id, row]));
+      rows = ranked.map((item) => byId.get(item.id)!).filter(Boolean);
+
       if (rows.length === 0 && !priceWhere.price) {
         rows = await this.prisma.product.findMany({
           where: { siteId, ...priceWhere },
-          orderBy: [{ price: 'asc' }, { updatedAt: 'desc' }],
+          orderBy: [{ updatedAt: 'desc' }, { price: 'asc' }],
           take: Math.min(5, limit),
         });
       }
@@ -191,7 +249,7 @@ export class CatalogToolExecutor {
       result: {
         count: products.length,
         note:
-          'Product cards with photos are shown automatically in the chat UI. Keep your reply short and do not claim images are unavailable.',
+          'Product cards with photos/prices are shown automatically between your intro and follow-up. Do not list product names or prices in the text. Write a short intro, blank line, optional follow-up question.',
         products: products.map((p) => this.serializeForModel(p)),
       },
       products,

@@ -1,24 +1,24 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { useEffect, useState } from "react"
-import { Plus, Store } from "lucide-react"
-import { toast } from "sonner"
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { Plus, Store } from "lucide-react";
+import { toast } from "sonner";
 import {
   EmptyState,
   ErrorState,
   LoadingBlock,
   PageHeader,
-} from "@/components/shared/page-states"
-import { Badge } from "@/components/ui/badge"
-import { Button, buttonVariants } from "@/components/ui/button"
+} from "@/components/shared/page-states";
+import { Badge } from "@/components/ui/badge";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
+} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -26,70 +26,81 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
-import { Spinner } from "@/components/ui/spinner"
-import { createSite, disconnectSite, listSites } from "@/lib/api/sites"
-import { getUserFacingError } from "@/lib/api/client"
-import type { Site } from "@/lib/types"
+} from "@/components/ui/dialog";
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
+import { UpgradePrompt } from "@/components/billing/plan-states";
+import { createSite, disconnectSite, listSites } from "@/lib/api/sites";
+import { ApiError, getUserFacingError } from "@/lib/api/client";
+import type { Site } from "@/lib/types";
 
 export default function SitesPage() {
-  const [sites, setSites] = useState<Site[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [open, setOpen] = useState(false)
-  const [domain, setDomain] = useState("")
-  const [formError, setFormError] = useState<string | null>(null)
-  const [busy, setBusy] = useState(false)
+  const [sites, setSites] = useState<Site[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
+  const [domain, setDomain] = useState("");
+  const [formError, setFormError] = useState<string | null>(null);
+  const [limitReached, setLimitReached] = useState(false);
+  const [busy, setBusy] = useState(false);
 
   async function load() {
-    setLoading(true)
-    setError(null)
+    setLoading(true);
+    setError(null);
     try {
-      setSites(await listSites())
+      setSites(await listSites());
     } catch (err) {
-      setError(getUserFacingError(err))
+      setError(getUserFacingError(err));
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
   useEffect(() => {
-    void load()
-  }, [])
+    void load();
+  }, []);
 
   async function onAdd(e: React.FormEvent) {
-    e.preventDefault()
-    setFormError(null)
+    e.preventDefault();
+    setFormError(null);
+    setLimitReached(false);
     if (!domain.trim()) {
-      setFormError("Enter a store URL.")
-      return
+      setFormError("Enter a store URL.");
+      return;
     }
-    setBusy(true)
+    setBusy(true);
     try {
-      await createSite({ domain })
-      setOpen(false)
-      setDomain("")
-      toast.success("Site added")
-      await load()
+      await createSite({ domain });
+      setOpen(false);
+      setDomain("");
+      toast.success("Site added");
+      await load();
     } catch (err) {
-      setFormError(getUserFacingError(err))
+      setLimitReached(
+        err instanceof ApiError && err.code === "SITE_LIMIT_REACHED",
+      );
+      setFormError(getUserFacingError(err));
     } finally {
-      setBusy(false)
+      setBusy(false);
     }
   }
 
   async function onDisconnect(id: string) {
-    setBusy(true)
+    setBusy(true);
     try {
-      await disconnectSite(id)
-      toast.success("Site disconnected")
-      await load()
+      await disconnectSite(id);
+      toast.success("Site disconnected");
+      await load();
     } catch (err) {
-      toast.error(getUserFacingError(err))
+      toast.error(getUserFacingError(err));
     } finally {
-      setBusy(false)
+      setBusy(false);
     }
   }
 
@@ -107,7 +118,9 @@ export default function SitesPage() {
       />
 
       {loading ? <LoadingBlock /> : null}
-      {error ? <ErrorState description={error} onRetry={() => void load()} /> : null}
+      {error ? (
+        <ErrorState description={error} onRetry={() => void load()} />
+      ) : null}
 
       {!loading && !error && sites.length === 0 ? (
         <EmptyState
@@ -135,7 +148,9 @@ export default function SitesPage() {
                   </div>
                   <Badge
                     variant={
-                      site.connectionStatus === "connected" ? "default" : "secondary"
+                      site.connectionStatus === "connected"
+                        ? "default"
+                        : "secondary"
                     }
                   >
                     {site.connectionStatus}
@@ -170,7 +185,10 @@ export default function SitesPage() {
                   </Link>
                   <Link
                     href="/dashboard/assistant"
-                    className={buttonVariants({ size: "sm", variant: "outline" })}
+                    className={buttonVariants({
+                      size: "sm",
+                      variant: "outline",
+                    })}
                   >
                     Configure
                   </Link>
@@ -208,11 +226,23 @@ export default function SitesPage() {
                   onChange={(e) => setDomain(e.target.value)}
                   aria-invalid={!!formError || undefined}
                 />
-                {formError ? <FieldError>{formError}</FieldError> : null}
+                {formError && !limitReached ? (
+                  <FieldError>{formError}</FieldError>
+                ) : null}
               </Field>
+              {limitReached && formError ? (
+                <UpgradePrompt
+                  title="You've reached your site limit."
+                  description={formError}
+                />
+              ) : null}
             </FieldGroup>
             <DialogFooter className="mt-4">
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setOpen(false)}
+              >
                 Cancel
               </Button>
               <Button type="submit" disabled={busy}>
@@ -224,5 +254,5 @@ export default function SitesPage() {
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }

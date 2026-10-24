@@ -3,11 +3,13 @@ import { PlanId, AIProviderName } from '../types/ai.types';
 /**
  * Central mapping: subscription plan → AI provider.
  * Chat/business code must not duplicate this logic.
+ *
+ * All plans use DeepSeek for now.
  */
 export const PLAN_AI_PROVIDER: Record<PlanId, AIProviderName> = {
   free: 'deepseek',
-  pro: 'openai',
-  business: 'openai',
+  pro: 'deepseek',
+  business: 'deepseek',
 };
 
 export function resolveProviderNameForPlan(planId: string): AIProviderName {

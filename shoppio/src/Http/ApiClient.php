@@ -73,10 +73,12 @@ final class ApiClient {
 			$request_headers['Authorization'] = 'Bearer ' . $token;
 		}
 
+		$timeout = false !== strpos( $path, '/products/sync' ) ? 120 : 30;
+
 		$args = array(
 			'method'  => strtoupper( $method ),
 			'headers' => $request_headers,
-			'timeout' => 30,
+			'timeout' => $timeout,
 		);
 
 		if ( ! empty( $body ) ) {

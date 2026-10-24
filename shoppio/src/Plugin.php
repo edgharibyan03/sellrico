@@ -68,8 +68,8 @@ final class Plugin {
 	public function register_modules(): void {
 		( new AdminMenu() )->register();
 		( new SettingsPage( $this->connection, $this->config, $this->product_syncer ) )->register();
-		( new RestRoutes( $this->config, $this->api_client, $this->logger ) )->register();
-		( new ChatWidget( $this->config ) )->register();
+		( new RestRoutes( $this->config, $this->api_client, $this->logger, $this->product_syncer ) )->register();
+		( new ChatWidget( $this->config, $this->api_client ) )->register();
 		( new WooCommerceDetector( $this->logger ) )->register();
 		( new ProductChangeWatcher( $this->config, $this->logger, $this->product_syncer ) )->register();
 	}

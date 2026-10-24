@@ -66,12 +66,20 @@ export class OpenAICompatibleClient {
         });
       }
 
+      const usage = completion.usage;
       return {
         content,
         toolCalls,
         finishReason: this.mapFinishReason(choice.finish_reason, toolCalls.length > 0),
         provider: this.provider,
         model: completion.model ?? this.model,
+        usage: usage
+          ? {
+              inputTokens: usage.prompt_tokens ?? 0,
+              outputTokens: usage.completion_tokens ?? 0,
+              totalTokens: usage.total_tokens ?? 0,
+            }
+          : undefined,
       };
     } catch (error) {
       throw this.normalizeError(error);
@@ -170,9 +178,7 @@ export class OpenAICompatibleClient {
     return messages;
   }
 
-  private formatMessage(
-    message: AIMessage,
-  ): OpenAI.Chat.Completions.ChatCompletionMessageParam {
+  private formatMessage(message: AIMessage): OpenAI.Chat.Completions.ChatCompletionMessageParam {
     if (message.role === 'tool') {
       return {
         role: 'tool',
@@ -206,9 +212,7 @@ export class OpenAICompatibleClient {
     return { role: 'user', content: message.content };
   }
 
-  private formatTools(
-    tools: AIToolDefinition[],
-  ): OpenAI.Chat.Completions.ChatCompletionTool[] {
+  private formatTools(tools: AIToolDefinition[]): OpenAI.Chat.Completions.ChatCompletionTool[] {
     return tools.map((tool) => ({
       type: 'function' as const,
       function: {
@@ -227,8 +231,9 @@ export class OpenAICompatibleClient {
     }
 
     return raw
-      .filter((call): call is OpenAI.Chat.Completions.ChatCompletionMessageFunctionToolCall =>
-        call.type === 'function',
+      .filter(
+        (call): call is OpenAI.Chat.Completions.ChatCompletionMessageFunctionToolCall =>
+          call.type === 'function',
       )
       .map((call) => ({
         id: call.id,
@@ -280,9 +285,7 @@ export class OpenAICompatibleClient {
         : undefined;
 
     const message =
-      error instanceof Error
-        ? this.sanitizeMessage(error.message)
-        : 'Unknown AI provider error';
+      error instanceof Error ? this.sanitizeMessage(error.message) : 'Unknown AI provider error';
 
     if (status === 401 || status === 403) {
       return new AIProviderError('AUTHENTICATION', 'AI provider authentication failed', {

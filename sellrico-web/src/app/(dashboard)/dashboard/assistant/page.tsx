@@ -1,23 +1,23 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { toast } from "sonner"
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import {
   EmptyState,
   ErrorState,
   LoadingBlock,
   PageHeader,
-} from "@/components/shared/page-states"
-import { Button } from "@/components/ui/button"
+} from "@/components/shared/page-states";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
+} from "@/components/ui/card";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -25,53 +25,68 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { Spinner } from "@/components/ui/spinner"
-import { Textarea } from "@/components/ui/textarea"
-import { getAssistant, updateAssistant } from "@/lib/api/assistant"
-import { listSites } from "@/lib/api/sites"
-import { getUserFacingError } from "@/lib/api/client"
-import type { AssistantSettings, AssistantTone, Site } from "@/lib/types"
+} from "@/components/ui/select";
+import { Spinner } from "@/components/ui/spinner";
+import { Textarea } from "@/components/ui/textarea";
+import { LockedFeature } from "@/components/billing/plan-states";
+import { getAssistant, updateAssistant } from "@/lib/api/assistant";
+import { getSubscription } from "@/lib/api/billing";
+import { listSites } from "@/lib/api/sites";
+import { getUserFacingError } from "@/lib/api/client";
+import type { AssistantSettings, AssistantTone, Site } from "@/lib/types";
 
 export default function AssistantPage() {
-  const [sites, setSites] = useState<Site[]>([])
-  const [siteId, setSiteId] = useState<string>("")
-  const [settings, setSettings] = useState<AssistantSettings | null>(null)
-  const [questionsText, setQuestionsText] = useState("")
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [sites, setSites] = useState<Site[]>([]);
+  const [siteId, setSiteId] = useState<string>("");
+  const [settings, setSettings] = useState<AssistantSettings | null>(null);
+  const [questionsText, setQuestionsText] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [features, setFeatures] = useState<string[]>([]);
 
   async function load(selected?: string) {
-    setLoading(true)
-    setError(null)
+    setLoading(true);
+    setError(null);
     try {
-      const siteList = await listSites()
-      setSites(siteList)
-      const id = selected ?? siteList.find((s) => s.connectionStatus === "connected")?.id ?? siteList[0]?.id
+      const [siteList, subscription] = await Promise.all([
+        listSites(),
+        getSubscription(),
+      ]);
+      setFeatures(subscription.features ?? []);
+      setSites(siteList);
+      const id =
+        selected ??
+        siteList.find((s) => s.connectionStatus === "connected")?.id ??
+        siteList[0]?.id;
       if (!id) {
-        setSettings(null)
-        return
+        setSettings(null);
+        return;
       }
-      setSiteId(id)
-      const data = await getAssistant(id)
-      setSettings(data)
-      setQuestionsText(data.suggestedQuestions.join("\n"))
+      setSiteId(id);
+      const data = await getAssistant(id);
+      setSettings({
+        ...data,
+        offsetRight: data.offsetRight ?? 20,
+        offsetBottom: data.offsetBottom ?? 20,
+        suggestedQuestions: data.suggestedQuestions ?? [],
+      });
+      setQuestionsText((data.suggestedQuestions ?? []).join("\n"));
     } catch (err) {
-      setError(getUserFacingError(err))
+      setError(getUserFacingError(err));
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
   useEffect(() => {
-    void load()
-  }, [])
+    void load();
+  }, []);
 
   async function onSave(e: React.FormEvent) {
-    e.preventDefault()
-    if (!settings || !siteId) return
-    setSaving(true)
+    e.preventDefault();
+    if (!settings || !siteId) return;
+    setSaving(true);
     try {
       const next = await updateAssistant(siteId, {
         ...settings,
@@ -79,23 +94,26 @@ export default function AssistantPage() {
           .split("\n")
           .map((q) => q.trim())
           .filter(Boolean),
-      })
-      setSettings(next)
-      toast.success("Assistant settings saved")
+      });
+      setSettings(next);
+      toast.success("Assistant settings saved");
     } catch (err) {
-      toast.error(getUserFacingError(err))
+      toast.error(getUserFacingError(err));
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
   }
 
   if (loading) {
     return (
       <div className="flex flex-col gap-6">
-        <PageHeader title="AI Assistant" description="Configure how your assistant appears and speaks." />
+        <PageHeader
+          title="AI Assistant"
+          description="Configure how your assistant appears and speaks."
+        />
         <LoadingBlock />
       </div>
-    )
+    );
   }
 
   if (error) {
@@ -104,7 +122,7 @@ export default function AssistantPage() {
         <PageHeader title="AI Assistant" />
         <ErrorState description={error} onRetry={() => void load()} />
       </div>
-    )
+    );
   }
 
   if (sites.length === 0 || !settings) {
@@ -114,13 +132,14 @@ export default function AssistantPage() {
         <EmptyState
           title="No store connected"
           description="Connect a WooCommerce store before configuring the assistant."
-          action={
-            <Button onClick={() => void load()}>Refresh</Button>
-          }
+          action={<Button onClick={() => void load()}>Refresh</Button>}
         />
       </div>
-    )
+    );
   }
+
+  const fullCustomization = features.includes("full_assistant_customization");
+  const removeBranding = features.includes("remove_branding");
 
   return (
     <div className="flex flex-col gap-6">
@@ -142,7 +161,7 @@ export default function AssistantPage() {
                 <Select
                   value={siteId}
                   onValueChange={(v) => {
-                    if (v) void load(v)
+                    if (v) void load(v);
                   }}
                 >
                   <SelectTrigger className="w-full max-w-md">
@@ -159,12 +178,22 @@ export default function AssistantPage() {
                   </SelectContent>
                 </Select>
               </Field>
+              {!fullCustomization ? (
+                <LockedFeature
+                  title="Full assistant customization"
+                  description="Name, tone, color, and suggested questions are locked on your current plan. You can still set a welcome message."
+                  availableOn="Pro / Business"
+                />
+              ) : null}
               <Field>
                 <FieldLabel htmlFor="name">Assistant name</FieldLabel>
                 <Input
                   id="name"
                   value={settings.name}
-                  onChange={(e) => setSettings({ ...settings, name: e.target.value })}
+                  disabled={!fullCustomization}
+                  onChange={(e) =>
+                    setSettings({ ...settings, name: e.target.value })
+                  }
                   required
                 />
               </Field>
@@ -183,6 +212,7 @@ export default function AssistantPage() {
                 <Field>
                   <FieldLabel>Language</FieldLabel>
                   <Select
+                    disabled={!fullCustomization}
                     value={settings.language}
                     onValueChange={(v) =>
                       v && setSettings({ ...settings, language: v })
@@ -194,6 +224,7 @@ export default function AssistantPage() {
                     <SelectContent>
                       <SelectGroup>
                         <SelectItem value="en">English</SelectItem>
+                        <SelectItem value="ru">Russian</SelectItem>
                         <SelectItem value="es">Spanish</SelectItem>
                         <SelectItem value="fr">French</SelectItem>
                         <SelectItem value="de">German</SelectItem>
@@ -204,9 +235,11 @@ export default function AssistantPage() {
                 <Field>
                   <FieldLabel>Tone</FieldLabel>
                   <Select
+                    disabled={!fullCustomization}
                     value={settings.tone}
                     onValueChange={(v) =>
-                      v && setSettings({ ...settings, tone: v as AssistantTone })
+                      v &&
+                      setSettings({ ...settings, tone: v as AssistantTone })
                     }
                   >
                     <SelectTrigger className="w-full">
@@ -215,9 +248,13 @@ export default function AssistantPage() {
                     <SelectContent>
                       <SelectGroup>
                         <SelectItem value="friendly">Friendly</SelectItem>
-                        <SelectItem value="professional">Professional</SelectItem>
+                        <SelectItem value="professional">
+                          Professional
+                        </SelectItem>
                         <SelectItem value="concise">Concise</SelectItem>
-                        <SelectItem value="enthusiastic">Enthusiastic</SelectItem>
+                        <SelectItem value="enthusiastic">
+                          Enthusiastic
+                        </SelectItem>
                       </SelectGroup>
                     </SelectContent>
                   </Select>
@@ -229,6 +266,7 @@ export default function AssistantPage() {
                   <Input
                     id="color"
                     type="color"
+                    disabled={!fullCustomization}
                     className="h-10 w-14 p-1"
                     value={settings.primaryColor}
                     onChange={(e) =>
@@ -237,22 +275,81 @@ export default function AssistantPage() {
                   />
                   <Input
                     value={settings.primaryColor}
+                    disabled={!fullCustomization}
                     onChange={(e) =>
                       setSettings({ ...settings, primaryColor: e.target.value })
                     }
                   />
                 </div>
               </Field>
+              <div className="grid gap-5 sm:grid-cols-2">
+                <Field>
+                  <FieldLabel htmlFor="offset-right">
+                    Icon offset from right (px)
+                  </FieldLabel>
+                  <Input
+                    id="offset-right"
+                    type="number"
+                    min={0}
+                    max={200}
+                    disabled={!fullCustomization}
+                    value={settings.offsetRight ?? 20}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        offsetRight: Math.min(
+                          200,
+                          Math.max(0, Number(e.target.value) || 0),
+                        ),
+                      })
+                    }
+                  />
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="offset-bottom">
+                    Icon offset from bottom (px)
+                  </FieldLabel>
+                  <Input
+                    id="offset-bottom"
+                    type="number"
+                    min={0}
+                    max={200}
+                    disabled={!fullCustomization}
+                    value={settings.offsetBottom ?? 20}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        offsetBottom: Math.min(
+                          200,
+                          Math.max(0, Number(e.target.value) || 0),
+                        ),
+                      })
+                    }
+                  />
+                </Field>
+              </div>
               <Field>
                 <FieldLabel htmlFor="questions">Suggested questions</FieldLabel>
                 <Textarea
                   id="questions"
                   rows={4}
+                  disabled={!fullCustomization}
                   value={questionsText}
                   onChange={(e) => setQuestionsText(e.target.value)}
                   placeholder="One question per line"
                 />
               </Field>
+              {removeBranding ? (
+                <p className="text-sm text-muted-foreground">
+                  Shoppio branding is removed on your storefront.
+                </p>
+              ) : (
+                <LockedFeature
+                  title="Remove Shoppio branding"
+                  description="Free plans show Shoppio branding on the storefront assistant."
+                  availableOn="Pro / Business"
+                />
+              )}
               <Button type="submit" disabled={saving} className="w-fit">
                 {saving ? <Spinner data-icon="inline-start" /> : null}
                 Save changes
@@ -262,5 +359,5 @@ export default function AssistantPage() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

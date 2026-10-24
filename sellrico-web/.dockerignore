@@ -1,0 +1,13 @@
+node_modules
+.next
+.git
+.gitignore
+.env*
+!.env.example
+npm-debug.log*
+README.md
+FRONTEND_ARCHITECTURE.md
+AGENTS.md
+CLAUDE.md
+*.md
+.DS_Store

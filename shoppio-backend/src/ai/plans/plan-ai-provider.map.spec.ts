@@ -4,16 +4,16 @@ import {
 } from './plan-ai-provider.map';
 
 describe('PLAN_AI_PROVIDER mapping', () => {
-  it('maps free → deepseek and pro/business → openai', () => {
+  it('maps all plans → deepseek', () => {
     expect(PLAN_AI_PROVIDER.free).toBe('deepseek');
-    expect(PLAN_AI_PROVIDER.pro).toBe('openai');
-    expect(PLAN_AI_PROVIDER.business).toBe('openai');
+    expect(PLAN_AI_PROVIDER.pro).toBe('deepseek');
+    expect(PLAN_AI_PROVIDER.business).toBe('deepseek');
   });
 
   it('resolves known plans case-insensitively', () => {
     expect(resolveProviderNameForPlan('free')).toBe('deepseek');
-    expect(resolveProviderNameForPlan('PRO')).toBe('openai');
-    expect(resolveProviderNameForPlan('Business')).toBe('openai');
+    expect(resolveProviderNameForPlan('PRO')).toBe('deepseek');
+    expect(resolveProviderNameForPlan('Business')).toBe('deepseek');
   });
 
   it('falls back to free mapping for unknown plans', () => {

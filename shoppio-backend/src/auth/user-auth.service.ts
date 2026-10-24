@@ -1,24 +1,21 @@
 import {
   ConflictException,
+  Inject,
   Injectable,
   UnauthorizedException,
+  forwardRef,
 } from '@nestjs/common';
+import { SubscriptionService } from '../billing/subscription.service';
 import { JwtService } from '@nestjs/jwt';
 import { User } from '@prisma/client';
 import * as argon2 from 'argon2';
 import { AppConfigService } from '../config/app-config.service';
 import { PrismaService } from '../prisma/prisma.service';
-import {
-  AuthenticatedUser,
-  toAuthenticatedUser,
-} from '../common/types/authenticated-user';
+import { AuthenticatedUser, toAuthenticatedUser } from '../common/types/authenticated-user';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
-import {
-  AuthSessionResponseDto,
-  UserResponseDto,
-} from './dto/user-auth-response.dto';
+import { AuthSessionResponseDto, UserResponseDto } from './dto/user-auth-response.dto';
 import { UserJwtPayload } from './interfaces/user-jwt-payload.interface';
 
 @Injectable()
@@ -27,6 +24,8 @@ export class UserAuthService {
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
     private readonly appConfig: AppConfigService,
+    @Inject(forwardRef(() => SubscriptionService))
+    private readonly subscriptions: SubscriptionService,
   ) {}
 
   async register(dto: RegisterDto): Promise<AuthSessionResponseDto> {
@@ -41,14 +40,19 @@ export class UserAuthService {
     }
 
     const passwordHash = await argon2.hash(dto.password);
-    const user = await this.prisma.user.create({
-      data: {
-        email,
-        name: dto.name.trim(),
-        passwordHash,
-        onboardingCompleted: false,
-        onboardingStep: 0,
-      },
+    await this.subscriptions.prepareFreeAssignment();
+    const user = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.user.create({
+        data: {
+          email,
+          name: dto.name.trim(),
+          passwordHash,
+          onboardingCompleted: false,
+          onboardingStep: 0,
+        },
+      });
+      await this.subscriptions.attachFreePlan(created.id, tx);
+      return created;
     });
 
     return this.toSession(user);

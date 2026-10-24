@@ -7,6 +7,10 @@ export interface ApiErrorBody {
   code: string;
   message: string;
   details?: unknown;
+  upgradeRequired?: boolean;
+  limit?: number;
+  used?: number;
+  plan?: string;
 }
 
 export interface ApiErrorResponse {

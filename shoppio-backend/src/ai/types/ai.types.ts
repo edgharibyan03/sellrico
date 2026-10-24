@@ -45,12 +45,19 @@ export interface AIChatRequest {
   maxTokens?: number;
 }
 
+export interface AIUsageStats {
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+}
+
 export interface AIChatResponse {
   content: string | null;
   toolCalls: AIToolCall[];
   finishReason: 'stop' | 'tool_calls' | 'length' | 'content_filter' | 'error';
   provider: AIProviderName;
   model: string;
+  usage?: AIUsageStats;
 }
 
 export interface AIStreamChunk {

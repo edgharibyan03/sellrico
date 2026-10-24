@@ -32,6 +32,19 @@ enum MessageRole {
   TOOL
 }
 
+enum SubscriptionStatus {
+  ACTIVE
+  TRIALING
+  PAST_DUE
+  CANCELED
+  EXPIRED
+}
+
+enum BillingInterval {
+  MONTHLY
+  ANNUAL
+}
+
 model User {
   id                   String   @id @default(uuid()) @db.Uuid
   email                String   @unique
@@ -42,7 +55,10 @@ model User {
   createdAt            DateTime @default(now()) @map("created_at")
   updatedAt            DateTime @updatedAt @map("updated_at")
 
-  sites Site[]
+  sites         Site[]
+  subscription  Subscription?
+  usagePeriods  UsagePeriod[]
+  aiUsageRecords AiUsageRecord[]
 
   @@map("users")
 }
@@ -62,12 +78,36 @@ model Site {
   credentials   SiteCredential[]
   connectCodes  SiteConnectCode[]
   products      Product[]
-  conversations Conversation[]
-  usageEvents   UsageEvent[]
+  conversations  Conversation[]
+  usageEvents    UsageEvent[]
+  aiUsageRecords AiUsageRecord[]
+  assistant      AssistantSettings?
 
   @@index([domain])
   @@index([ownerUserId])
   @@map("sites")
+}
+
+/// Per-site storefront assistant appearance and voice settings.
+model AssistantSettings {
+  id                 String   @id @default(uuid()) @db.Uuid
+  siteId             String   @unique @map("site_id") @db.Uuid
+  name               String   @default("Shoppio Assistant") @db.VarChar(80)
+  welcomeMessage     String   @map("welcome_message") @db.Text
+  language           String   @default("en") @db.VarChar(16)
+  tone               String   @default("friendly") @db.VarChar(32)
+  primaryColor       String   @default("#0F766E") @map("primary_color") @db.VarChar(16)
+  suggestedQuestions Json     @default("[]") @map("suggested_questions")
+  /// Distance of the chat launcher from the right edge (px).
+  offsetRight        Int      @default(20) @map("offset_right")
+  /// Distance of the chat launcher from the bottom edge (px).
+  offsetBottom       Int      @default(20) @map("offset_bottom")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@map("assistant_settings")
 }
 
 model SiteConnectCode {
@@ -168,4 +208,100 @@ model UsageEvent {
   @@index([siteId])
   @@index([siteId, type, createdAt])
   @@map("usage_events")
+}
+
+/// Configurable plan catalog. Business logic reads these rows;
+/// `plans.catalog.ts` seeds them and can later be replaced by admin edits.
+model Plan {
+  id                   String   @id @default(uuid()) @db.Uuid
+  name                 String
+  slug                 String   @unique @db.VarChar(32)
+  description          String   @db.Text
+  priceMonthly         Int      @map("price_monthly")
+  priceAnnual          Int?     @map("price_annual")
+  maxSites             Int      @map("max_sites")
+  maxProducts          Int      @map("max_products")
+  maxAiMessages        Int      @map("max_ai_messages")
+  /// Null means conversation history is not time-limited.
+  historyRetentionDays Int?     @map("history_retention_days")
+  features             Json
+  highlights           Json
+  highlighted          Boolean  @default(false)
+  isActive             Boolean  @default(true) @map("is_active")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  subscriptions Subscription[]
+
+  @@map("plans")
+}
+
+/// One current subscription per account. Provider ids stay empty for Free.
+model Subscription {
+  id                     String             @id @default(uuid()) @db.Uuid
+  userId                 String             @unique @map("user_id") @db.Uuid
+  planId                 String             @map("plan_id") @db.Uuid
+  /// Abstract provider key: none, paddle, stripe, or a future market-specific id.
+  provider               String             @default("none") @db.VarChar(32)
+  providerCustomerId     String?            @map("provider_customer_id")
+  providerSubscriptionId String?            @map("provider_subscription_id")
+  status                 SubscriptionStatus @default(ACTIVE)
+  interval               BillingInterval    @default(MONTHLY)
+  currentPeriodStart     DateTime           @map("current_period_start")
+  currentPeriodEnd       DateTime           @map("current_period_end")
+  cancelAtPeriodEnd      Boolean            @default(false) @map("cancel_at_period_end")
+  createdAt              DateTime           @default(now()) @map("created_at")
+  updatedAt              DateTime           @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan Plan @relation(fields: [planId], references: [id])
+
+  @@index([planId])
+  @@index([status])
+  @@map("subscriptions")
+}
+
+/// Monthly AI usage bucket. A new row starts each billing month so usage resets.
+model UsagePeriod {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @map("user_id") @db.Uuid
+  periodStart   DateTime @map("period_start")
+  periodEnd     DateTime @map("period_end")
+  aiMessages    Int      @default(0) @map("ai_messages")
+  inputTokens   Int      @default(0) @map("input_tokens")
+  outputTokens  Int      @default(0) @map("output_tokens")
+  totalTokens   Int      @default(0) @map("total_tokens")
+  estimatedCost Decimal  @default(0) @map("estimated_cost") @db.Decimal(12, 6)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  aiUsageRecords AiUsageRecord[]
+
+  @@unique([userId, periodStart])
+  @@index([userId, periodEnd])
+  @@map("usage_periods")
+}
+
+/// Per-request token usage for later cost accounting. Not shown to customers.
+model AiUsageRecord {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @map("user_id") @db.Uuid
+  siteId        String?  @map("site_id") @db.Uuid
+  usagePeriodId String?  @map("usage_period_id") @db.Uuid
+  inputTokens   Int      @default(0) @map("input_tokens")
+  outputTokens  Int      @default(0) @map("output_tokens")
+  totalTokens   Int      @default(0) @map("total_tokens")
+  model         String?
+  provider      String?  @db.VarChar(32)
+  estimatedCost Decimal  @default(0) @map("estimated_cost") @db.Decimal(12, 6)
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  site        Site?        @relation(fields: [siteId], references: [id], onDelete: SetNull)
+  usagePeriod UsagePeriod? @relation(fields: [usagePeriodId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([siteId])
+  @@map("ai_usage_records")
 }

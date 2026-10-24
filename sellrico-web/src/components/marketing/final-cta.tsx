@@ -1,5 +1,4 @@
-import Link from "next/link"
-import { buttonVariants } from "@/components/ui/button"
+import { AuthCtaLink } from "@/components/auth/auth-cta-link"
 import { brand } from "@/lib/config/brand"
 
 export function FinalCtaSection() {
@@ -13,9 +12,7 @@ export function FinalCtaSection() {
           Create your {brand.name} account, connect your store, and go live in
           minutes.
         </p>
-        <Link href="/signup" className={buttonVariants({ size: "lg" })}>
-          Get Started
-        </Link>
+        <AuthCtaLink size="lg" />
       </div>
     </section>
   )

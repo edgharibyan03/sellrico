@@ -1,4 +1,5 @@
-:root {
+/* Host isolates the widget from theme button/link/svg rules. */
+.shoppio-chat-host {
   --shoppio-accent: #0f766e;
   --shoppio-accent-hover: #0d9488;
   --shoppio-bg: #ffffff;
@@ -6,84 +7,210 @@
   --shoppio-muted: #64748b;
   --shoppio-border: #e2e8f0;
   --shoppio-shadow: 0 18px 50px rgba(15, 23, 42, 0.18);
+  --shoppio-offset-right: 16px;
+  --shoppio-offset-bottom: 16px;
+  --shoppio-icon: #ffffff;
+  position: relative;
+  z-index: 99999;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  color: var(--shoppio-text);
+  line-height: 1.4;
+  text-align: left;
+}
+
+.shoppio-chat-host *,
+.shoppio-chat-host *::before,
+.shoppio-chat-host *::after {
+  box-sizing: border-box;
+}
+
+.shoppio-chat-host button,
+.shoppio-chat-host input,
+.shoppio-chat-host a {
+  font: inherit;
+  appearance: none;
+  -webkit-appearance: none;
 }
 
 .shoppio-chat-launcher {
   position: fixed;
-  right: 20px;
-  bottom: 20px;
-  z-index: 99999;
-  width: 56px;
-  height: 56px;
-  border: 0;
-  border-radius: 999px;
-  background: var(--shoppio-accent);
-  color: #fff;
-  cursor: pointer;
-  box-shadow: var(--shoppio-shadow);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  right: var(--shoppio-offset-right);
+  bottom: var(--shoppio-offset-bottom);
+  left: auto;
+  top: auto;
+  z-index: 100001;
+  width: 52px !important;
+  height: 52px !important;
+  min-width: 52px !important;
+  min-height: 52px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: var(--shoppio-accent) !important;
+  background-image: none !important;
+  color: var(--shoppio-icon) !important;
+  cursor: grab;
+  box-shadow: var(--shoppio-shadow) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
   transition: background 0.15s ease, transform 0.15s ease;
+  outline: none !important;
+  text-decoration: none !important;
+  line-height: 1 !important;
+  overflow: hidden;
+  touch-action: none;
 }
 
-.shoppio-chat-launcher:hover {
-  background: var(--shoppio-accent-hover);
-  transform: translateY(-1px);
+.shoppio-chat-launcher:hover,
+.shoppio-chat-launcher:focus,
+.shoppio-chat-launcher:active {
+  background: var(--shoppio-accent-hover) !important;
+  color: var(--shoppio-icon) !important;
+  transform: none;
+}
+
+.shoppio-chat-launcher.is-dragging {
+  cursor: grabbing;
+  transition: none;
+}
+
+.shoppio-chat-launcher svg {
+  width: 24px !important;
+  height: 24px !important;
+  display: block !important;
+  pointer-events: none;
+  color: var(--shoppio-icon) !important;
+  fill: #fff !important;
+  stroke: var(--shoppio-icon) !important;
+}
+
+.shoppio-chat-launcher svg path,
+.shoppio-chat-launcher svg * {
+  fill: #fff !important;
+  stroke: var(--shoppio-icon) !important;
+  color: var(--shoppio-icon) !important;
 }
 
 .shoppio-chat-panel {
   position: fixed;
-  right: 20px;
-  bottom: 88px;
-  z-index: 99999;
+  right: var(--shoppio-offset-right);
+  bottom: calc(var(--shoppio-offset-bottom) + 68px);
+  left: auto;
+  top: auto;
+  z-index: 100000;
   width: min(380px, calc(100vw - 24px));
   height: min(560px, calc(100vh - 120px));
-  background: var(--shoppio-bg);
-  border: 1px solid var(--shoppio-border);
-  border-radius: 16px;
-  box-shadow: var(--shoppio-shadow);
+  background: var(--shoppio-bg) !important;
+  border: 1px solid var(--shoppio-border) !important;
+  border-radius: 16px !important;
+  box-shadow: var(--shoppio-shadow) !important;
   display: none;
   flex-direction: column;
   overflow: hidden;
-  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  touch-action: none;
 }
 
 .shoppio-chat-panel.is-open {
-  display: flex;
+  display: flex !important;
+}
+
+.shoppio-chat-panel.is-dragging {
+  opacity: 0.96;
+  user-select: none;
 }
 
 .shoppio-chat-header {
   padding: 14px 16px;
-  background: linear-gradient(135deg, #0f766e, #115e59);
-  color: #fff;
+  background: linear-gradient(135deg, var(--shoppio-accent), var(--shoppio-accent-hover)) !important;
+  color: #fff !important;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  cursor: grab;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.shoppio-chat-header.is-dragging,
+.shoppio-chat-panel.is-dragging .shoppio-chat-header {
+  cursor: grabbing;
 }
 
 .shoppio-chat-header strong {
-  font-size: 14px;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  color: #fff !important;
+  margin: 0 !important;
 }
 
 .shoppio-chat-close {
-  border: 0;
-  background: transparent;
-  color: #fff;
+  border: 0 !important;
+  background: transparent !important;
+  background-image: none !important;
+  color: #fff !important;
   cursor: pointer;
-  font-size: 18px;
-  line-height: 1;
+  font-size: 22px !important;
+  line-height: 1 !important;
+  width: 28px !important;
+  height: 28px !important;
+  min-width: 28px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.shoppio-chat-close:hover,
+.shoppio-chat-close:focus,
+.shoppio-chat-close:active {
+  background: rgba(255, 255, 255, 0.14) !important;
+  color: #fff !important;
+}
+
+.shoppio-chat-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 12px 12px;
+  flex-shrink: 0;
+}
+
+.shoppio-chat-suggestion {
+  border: 1px solid var(--shoppio-border) !important;
+  background: #f8fafc !important;
+  color: var(--shoppio-text) !important;
+  border-radius: 999px !important;
+  padding: 6px 10px !important;
+  font-size: 12px !important;
+  line-height: 1.3 !important;
+  cursor: pointer;
+  text-align: left;
+  box-shadow: none !important;
+}
+
+.shoppio-chat-suggestion:hover,
+.shoppio-chat-suggestion:focus {
+  border-color: var(--shoppio-accent) !important;
+  color: var(--shoppio-accent) !important;
+  background: #fff !important;
 }
 
 .shoppio-chat-messages {
   flex: 1;
   overflow-y: auto;
   padding: 14px;
-  background: #f8fafc;
+  background: #f8fafc !important;
   display: flex;
   flex-direction: column;
   gap: 10px;
+  touch-action: pan-y;
 }
 
 .shoppio-chat-bubble {
@@ -97,30 +224,29 @@
 
 .shoppio-chat-bubble--assistant {
   align-self: flex-start;
-  background: #fff;
+  background: #fff !important;
   border: 1px solid var(--shoppio-border);
-  color: var(--shoppio-text);
+  color: var(--shoppio-text) !important;
 }
 
 .shoppio-chat-bubble--user {
   align-self: flex-end;
-  background: var(--shoppio-accent);
-  color: #fff;
+  background: var(--shoppio-accent) !important;
+  color: #fff !important;
   white-space: pre-wrap;
 }
 
 .shoppio-chat-inline-link {
   display: inline-block;
   margin-top: 2px;
-  color: var(--shoppio-accent);
+  color: var(--shoppio-accent) !important;
   font-weight: 600;
-  text-decoration: none;
+  text-decoration: none !important;
   border-bottom: 1px solid rgba(15, 118, 110, 0.35);
 }
 
 .shoppio-chat-inline-link:hover {
-  color: var(--shoppio-accent-hover);
-  border-bottom-color: var(--shoppio-accent-hover);
+  color: var(--shoppio-accent-hover) !important;
 }
 
 .shoppio-chat-bullet {
@@ -151,16 +277,17 @@
   align-items: center;
   padding: 10px;
   border-radius: 12px;
-  background: #fff;
-  border: 1px solid var(--shoppio-border);
-  text-decoration: none;
-  color: inherit;
+  background: #fff !important;
+  border: 1px solid var(--shoppio-border) !important;
+  text-decoration: none !important;
+  color: inherit !important;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: none !important;
 }
 
 .shoppio-chat-product:hover {
-  border-color: #99f6e4;
-  box-shadow: 0 4px 14px rgba(15, 118, 110, 0.08);
+  border-color: #99f6e4 !important;
+  box-shadow: 0 4px 14px rgba(15, 118, 110, 0.08) !important;
 }
 
 .shoppio-chat-product-media,
@@ -179,8 +306,7 @@
 }
 
 .shoppio-chat-product-placeholder {
-  background:
-    linear-gradient(135deg, #e2e8f0 0%, #f1f5f9 100%);
+  background: linear-gradient(135deg, #e2e8f0 0%, #f1f5f9 100%);
 }
 
 .shoppio-chat-product-meta {
@@ -193,11 +319,12 @@
   font-size: 13px;
   font-weight: 600;
   line-height: 1.3;
+  color: var(--shoppio-text) !important;
 }
 
 .shoppio-chat-product small {
   display: block;
-  color: var(--shoppio-muted);
+  color: var(--shoppio-muted) !important;
   font-weight: 500;
   margin-top: 4px;
 }
@@ -207,7 +334,7 @@
   margin-top: 4px;
   font-size: 11px;
   font-style: normal;
-  color: var(--shoppio-accent);
+  color: var(--shoppio-accent) !important;
 }
 
 .shoppio-chat-form {
@@ -215,36 +342,60 @@
   gap: 8px;
   padding: 12px;
   border-top: 1px solid var(--shoppio-border);
-  background: #fff;
+  background: #fff !important;
+  flex-shrink: 0;
 }
 
 .shoppio-chat-form input {
   flex: 1;
-  border: 1px solid var(--shoppio-border);
-  border-radius: 10px;
-  padding: 10px 12px;
-  font-size: 14px;
+  border: 1px solid var(--shoppio-border) !important;
+  border-radius: 10px !important;
+  padding: 10px 12px !important;
+  font-size: 14px !important;
+  background: #fff !important;
+  color: var(--shoppio-text) !important;
+  box-shadow: none !important;
+  outline: none !important;
+  margin: 0 !important;
+  height: auto !important;
+  min-height: 42px;
 }
 
 .shoppio-chat-form button,
 .shoppio-chat-send {
-  border: 0;
-  border-radius: 10px;
-  background: var(--shoppio-accent);
-  color: #fff;
-  width: 44px;
-  min-width: 44px;
-  height: 42px;
-  padding: 0;
+  border: 0 !important;
+  border-radius: 10px !important;
+  background: var(--shoppio-accent) !important;
+  background-image: none !important;
+  color: #fff !important;
+  width: 44px !important;
+  min-width: 44px !important;
+  height: 42px !important;
+  padding: 0 !important;
+  margin: 0 !important;
   cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
   flex-shrink: 0;
+  box-shadow: none !important;
+  outline: none !important;
 }
 
 .shoppio-chat-send svg {
-  display: block;
+  display: block !important;
+  width: 20px !important;
+  height: 20px !important;
+  color: #fff !important;
+  stroke: #fff !important;
+  fill: none !important;
+}
+
+.shoppio-chat-send svg path,
+.shoppio-chat-send svg * {
+  stroke: #fff !important;
+  fill: none !important;
+  color: #fff !important;
 }
 
 .shoppio-chat-form button:disabled,
@@ -256,5 +407,108 @@
 .shoppio-chat-typing {
   font-size: 12px;
   color: var(--shoppio-muted);
-  padding: 0 4px;
+  padding: 0 14px 8px;
+}
+
+.shoppio-chat-branding {
+  padding: 4px 12px 10px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--shoppio-muted) !important;
+  background: #fff !important;
+}
+
+.shoppio-chat-backdrop {
+  display: none;
+}
+
+html.shoppio-chat-open,
+html.shoppio-chat-open body {
+  overflow: hidden !important;
+  overscroll-behavior: none;
+  height: 100%;
+}
+
+@media (max-width: 640px) {
+  .shoppio-chat-host {
+    --shoppio-offset-right: 12px !important;
+    --shoppio-offset-bottom: 12px !important;
+  }
+
+  .shoppio-chat-launcher {
+    width: 48px !important;
+    height: 48px !important;
+    min-width: 48px !important;
+    min-height: 48px !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .shoppio-chat-host.is-open .shoppio-chat-launcher {
+    display: none !important;
+  }
+
+  .shoppio-chat-host.is-open .shoppio-chat-backdrop {
+    display: block !important;
+    position: fixed !important;
+    z-index: 100000;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    height: 100lvh !important;
+    min-height: 100dvh;
+    background: #fff !important;
+    touch-action: none;
+  }
+
+  .shoppio-chat-panel {
+    touch-action: auto;
+  }
+
+  .shoppio-chat-panel.is-open {
+    z-index: 100001;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    height: 100lvh !important;
+    min-height: 100dvh;
+    max-height: none !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+  }
+
+  .shoppio-chat-header {
+    cursor: default;
+    padding-top: calc(12px + env(safe-area-inset-top));
+  }
+
+  .shoppio-chat-messages {
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .shoppio-chat-form {
+    padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  }
+
+  .shoppio-chat-form input {
+    font-size: 16px !important;
+  }
+
+  .shoppio-chat-panel.is-keyboard .shoppio-chat-suggestions,
+  .shoppio-chat-panel.is-keyboard .shoppio-chat-branding {
+    display: none !important;
+  }
+
+  .shoppio-chat-panel.is-keyboard .shoppio-chat-form {
+    padding-bottom: 8px;
+  }
+
+  .shoppio-chat-panel.is-keyboard .shoppio-chat-header {
+    padding-top: 10px;
+  }
 }

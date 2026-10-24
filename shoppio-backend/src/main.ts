@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { AppConfigService } from './config/app-config.service';
@@ -8,8 +9,12 @@ import { ApiExceptionFilter } from './common/filters/api-exception.filter';
 import { ResponseTransformInterceptor } from './common/interceptors/response-transform.interceptor';
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const appConfig = app.get(AppConfigService);
+
+  // Product sync batches can exceed Express's default 100kb JSON limit.
+  app.useBodyParser('json', { limit: '10mb' });
+  app.useBodyParser('urlencoded', { limit: '10mb', extended: true });
 
   app.enableCors({
     origin: appConfig.corsOrigins,
@@ -65,7 +70,8 @@ async function bootstrap(): Promise<void> {
     .addTag('sites', 'Authenticated site endpoints (plugin)')
     .addTag('products', 'Product stubs (plugin) — sync not implemented')
     .addTag('conversations', 'Conversation stubs (plugin)')
-    .addTag('usage', 'Usage stubs (plugin)')
+    .addTag('usage', 'Usage metering')
+    .addTag('billing', 'Plans, subscription, and entitlements')
     .addTag('chat', 'Visitor AI chat (plugin)')
     .addTag('admin', 'Future dashboard endpoints')
     .build();

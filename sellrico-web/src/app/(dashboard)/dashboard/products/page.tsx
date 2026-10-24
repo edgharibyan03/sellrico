@@ -1,16 +1,16 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { Package, Search } from "lucide-react"
+import { useEffect, useState } from "react";
+import { Package, Search } from "lucide-react";
 import {
   EmptyState,
   ErrorState,
   LoadingBlock,
   PageHeader,
-} from "@/components/shared/page-states"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+} from "@/components/shared/page-states";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -18,7 +18,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -26,18 +26,20 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import { listProducts } from "@/lib/api/products"
-import { listSites } from "@/lib/api/sites"
-import { getUserFacingError } from "@/lib/api/client"
-import type { Paginated, Product, Site } from "@/lib/types"
+} from "@/components/ui/table";
+import { UpgradePrompt } from "@/components/billing/plan-states";
+import { getUsageSummary } from "@/lib/api/usage";
+import { listProductCategories, listProducts } from "@/lib/api/products";
+import { listSites } from "@/lib/api/sites";
+import { getUserFacingError } from "@/lib/api/client";
+import type { Paginated, Product, Site } from "@/lib/types";
 
 function ProductThumb({
   product,
   sizeClass = "size-10",
 }: {
-  product: Product
-  sizeClass?: string
+  product: Product;
+  sizeClass?: string;
 }) {
   if (product.imageUrl) {
     return (
@@ -47,7 +49,7 @@ function ProductThumb({
         alt={product.name}
         className={`${sizeClass} shrink-0 rounded-md object-cover bg-muted`}
       />
-    )
+    );
   }
   return (
     <div
@@ -55,58 +57,99 @@ function ProductThumb({
     >
       <Package className="size-4" />
     </div>
-  )
+  );
 }
 
 export default function ProductsPage() {
-  const [sites, setSites] = useState<Site[]>([])
-  const [siteId, setSiteId] = useState("all")
-  const [query, setQuery] = useState("")
-  const [page, setPage] = useState(1)
-  const [data, setData] = useState<Paginated<Product> | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [sites, setSites] = useState<Site[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [siteId, setSiteId] = useState("all");
+  const [category, setCategory] = useState("all");
+  const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const [data, setData] = useState<Paginated<Product> | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [productLimit, setProductLimit] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  async function load(opts?: { q?: string; page?: number; siteId?: string }) {
-    setLoading(true)
-    setError(null)
+  async function load(opts?: {
+    q?: string;
+    page?: number;
+    siteId?: string;
+    category?: string;
+  }) {
+    setLoading(true);
+    setError(null);
     try {
-      const siteList = sites.length ? sites : await listSites()
-      if (!sites.length) setSites(siteList)
-      const selected = opts?.siteId ?? siteId
+      const siteList = sites.length ? sites : await listSites();
+      if (!sites.length) setSites(siteList);
+      const selected = opts?.siteId ?? siteId;
+      const selectedCategory = opts?.category ?? category;
+      const siteFilter = selected === "all" ? undefined : selected;
+      const categoryList = await listProductCategories({ siteId: siteFilter });
+      setCategories(categoryList);
+      const effectiveCategory =
+        selectedCategory !== "all" && categoryList.includes(selectedCategory)
+          ? selectedCategory
+          : "all";
+      if (effectiveCategory !== category) {
+        setCategory(effectiveCategory);
+      }
       const result = await listProducts({
-        siteId: selected === "all" ? undefined : selected,
+        siteId: siteFilter,
         q: opts?.q ?? query,
+        category:
+          effectiveCategory === "all" ? undefined : effectiveCategory,
         page: opts?.page ?? page,
         pageSize: 8,
-      })
-      setData(result)
+      });
+      setData(result);
+      try {
+        const usage = await getUsageSummary();
+        const products = usage.metrics.find(
+          (metric) => metric.key === "products",
+        );
+        if (products?.limit != null && products.used >= products.limit) {
+          setProductLimit(
+            `${products.used.toLocaleString()} / ${products.limit.toLocaleString()} products synced. Plan limit reached. Upgrade to sync more products.`,
+          );
+        } else {
+          setProductLimit(null);
+        }
+      } catch {
+        setProductLimit(null);
+      }
     } catch (err) {
-      setError(getUserFacingError(err))
+      setError(getUserFacingError(err));
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
   useEffect(() => {
-    void load()
+    void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, []);
 
   function stockBadge(status: Product["stockStatus"]) {
-    if (status === "in_stock") return <Badge>In stock</Badge>
-    if (status === "out_of_stock") return <Badge variant="destructive">Out of stock</Badge>
-    return <Badge variant="secondary">On backorder</Badge>
+    if (status === "in_stock") return <Badge>In stock</Badge>;
+    if (status === "out_of_stock")
+      return <Badge variant="destructive">Out of stock</Badge>;
+    return <Badge variant="secondary">On backorder</Badge>;
   }
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Products"
-        description="WooCommerce products synced through Shoppio."
+        description="WooCommerce products synced through Shoppio. Exclusions stay available on every plan."
       />
 
-      <div className="flex flex-col gap-3 sm:flex-row">
+      {productLimit ? (
+        <UpgradePrompt title="Plan limit reached" description={productLimit} />
+      ) : null}
+
+      <div className="flex flex-col gap-3 lg:flex-row">
         <div className="relative flex-1">
           <Search className="pointer-events-none absolute top-2.5 left-2.5 size-4 text-muted-foreground" />
           <Input
@@ -116,8 +159,8 @@ export default function ProductsPage() {
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
-                setPage(1)
-                void load({ q: query, page: 1 })
+                setPage(1);
+                void load({ q: query, page: 1 });
               }
             }}
           />
@@ -125,13 +168,14 @@ export default function ProductsPage() {
         <Select
           value={siteId}
           onValueChange={(v) => {
-            if (!v) return
-            setSiteId(v)
-            setPage(1)
-            void load({ siteId: v, page: 1 })
+            if (!v) return;
+            setSiteId(v);
+            setCategory("all");
+            setPage(1);
+            void load({ siteId: v, category: "all", page: 1 });
           }}
         >
-          <SelectTrigger className="w-full sm:w-56">
+          <SelectTrigger className="w-full lg:w-56">
             <SelectValue placeholder="Filter by site" />
           </SelectTrigger>
           <SelectContent>
@@ -145,11 +189,34 @@ export default function ProductsPage() {
             </SelectGroup>
           </SelectContent>
         </Select>
+        <Select
+          value={category}
+          onValueChange={(v) => {
+            if (!v) return;
+            setCategory(v);
+            setPage(1);
+            void load({ category: v, page: 1 });
+          }}
+        >
+          <SelectTrigger className="w-full lg:w-64">
+            <SelectValue placeholder="Filter by category" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              <SelectItem value="all">All categories</SelectItem>
+              {categories.map((item) => (
+                <SelectItem key={item} value={item}>
+                  {item}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
         <Button
           variant="outline"
           onClick={() => {
-            setPage(1)
-            void load({ q: query, page: 1 })
+            setPage(1);
+            void load({ q: query, page: 1 });
           }}
         >
           Search
@@ -157,7 +224,9 @@ export default function ProductsPage() {
       </div>
 
       {loading ? <LoadingBlock /> : null}
-      {error ? <ErrorState description={error} onRetry={() => void load()} /> : null}
+      {error ? (
+        <ErrorState description={error} onRetry={() => void load()} />
+      ) : null}
 
       {!loading && !error && data && data.items.length === 0 ? (
         <EmptyState
@@ -244,9 +313,9 @@ export default function ProductsPage() {
                 size="sm"
                 disabled={page <= 1}
                 onClick={() => {
-                  const next = page - 1
-                  setPage(next)
-                  void load({ page: next })
+                  const next = page - 1;
+                  setPage(next);
+                  void load({ page: next });
                 }}
               >
                 Previous
@@ -256,9 +325,9 @@ export default function ProductsPage() {
                 size="sm"
                 disabled={page >= data.totalPages}
                 onClick={() => {
-                  const next = page + 1
-                  setPage(next)
-                  void load({ page: next })
+                  const next = page + 1;
+                  setPage(next);
+                  void load({ page: next });
                 }}
               >
                 Next
@@ -268,5 +337,5 @@ export default function ProductsPage() {
         </>
       ) : null}
     </div>
-  )
+  );
 }

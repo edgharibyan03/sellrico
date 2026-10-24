@@ -1,0 +1,94 @@
+name: Deploy production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      web: ${{ steps.filter.outputs.web }}
+      api: ${{ steps.filter.outputs.api }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            web:
+              - 'sellrico-web/**'
+              - '.github/workflows/deploy-prod.yml'
+            api:
+              - 'shoppio-backend/**'
+              - '.github/workflows/deploy-prod.yml'
+
+  deploy-web:
+    needs: changes
+    if: needs.changes.outputs.web == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.PROD_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "${{ secrets.PROD_SSH_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Rsync sellrico-web
+        run: |
+          rsync -az --delete \
+            --exclude node_modules \
+            --exclude .next \
+            --exclude .git \
+            --exclude '.env' \
+            --exclude '.env.*' \
+            --exclude '*.md' \
+            ./sellrico-web/ \
+            "${{ secrets.PROD_SSH_USER }}@${{ secrets.PROD_SSH_HOST }}:/opt/shoppio/web/"
+
+      - name: Build and restart web
+        run: |
+          ssh "${{ secrets.PROD_SSH_USER }}@${{ secrets.PROD_SSH_HOST }}" \
+            'sed -i "s/\r$//" /opt/shoppio/web/scripts/ci-deploy.sh && chmod +x /opt/shoppio/web/scripts/ci-deploy.sh && /opt/shoppio/web/scripts/ci-deploy.sh'
+
+  deploy-api:
+    needs: changes
+    if: needs.changes.outputs.api == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.PROD_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "${{ secrets.PROD_SSH_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Rsync shoppio-backend
+        run: |
+          rsync -az --delete \
+            --exclude node_modules \
+            --exclude dist \
+            --exclude .git \
+            --exclude '.env' \
+            --exclude '.env.*' \
+            --exclude coverage \
+            --exclude '*.md' \
+            ./shoppio-backend/ \
+            "${{ secrets.PROD_SSH_USER }}@${{ secrets.PROD_SSH_HOST }}:/opt/shoppio/backend/"
+
+      - name: Build and restart API
+        run: |
+          ssh "${{ secrets.PROD_SSH_USER }}@${{ secrets.PROD_SSH_HOST }}" \
+            'sed -i "s/\r$//" /opt/shoppio/backend/scripts/ci-deploy.sh && chmod +x /opt/shoppio/backend/scripts/ci-deploy.sh && /opt/shoppio/backend/scripts/ci-deploy.sh'

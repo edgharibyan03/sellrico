@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConflictException, UnauthorizedException } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
+import { SubscriptionService } from '../billing/subscription.service';
 import { AppConfigService } from '../config/app-config.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { UserAuthService } from './user-auth.service';
@@ -13,6 +14,11 @@ describe('UserAuthService', () => {
       findUniqueOrThrow: jest.fn(),
       create: jest.fn(),
     },
+    $transaction: jest.fn(),
+  };
+  const subscriptions = {
+    prepareFreeAssignment: jest.fn(),
+    attachFreePlan: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -22,6 +28,7 @@ describe('UserAuthService', () => {
       providers: [
         UserAuthService,
         { provide: PrismaService, useValue: prismaMock },
+        { provide: SubscriptionService, useValue: subscriptions },
         {
           provide: AppConfigService,
           useValue: {
@@ -37,6 +44,9 @@ describe('UserAuthService', () => {
 
   it('registers a new user and returns a session', async () => {
     prismaMock.user.findUnique.mockResolvedValue(null);
+    prismaMock.$transaction.mockImplementation(
+      async (callback: (tx: typeof prismaMock) => unknown) => callback(prismaMock),
+    );
     prismaMock.user.create.mockResolvedValue({
       id: '11111111-1111-1111-1111-111111111111',
       email: 'alex@example.com',
@@ -58,6 +68,11 @@ describe('UserAuthService', () => {
     expect(session.user.onboardingCompleted).toBe(false);
     expect(session.accessToken).toBeTruthy();
     expect(prismaMock.user.create).toHaveBeenCalled();
+    expect(subscriptions.prepareFreeAssignment).toHaveBeenCalled();
+    expect(subscriptions.attachFreePlan).toHaveBeenCalledWith(
+      '11111111-1111-1111-1111-111111111111',
+      prismaMock,
+    );
   });
 
   it('rejects duplicate email on register', async () => {

@@ -1,22 +1,32 @@
 import { Injectable } from '@nestjs/common';
 import { CredentialStatus, SiteStatus } from '@prisma/client';
+import { EntitlementService } from '../billing/entitlement.service';
 import { AuthenticatedUser } from '../common/types/authenticated-user';
 import { PrismaService } from '../prisma/prisma.service';
 
 type PlanId = 'free' | 'pro' | 'business';
 
-const PLAN_AI_LIMITS: Record<PlanId, number | null> = {
-  free: 500,
-  pro: 5000,
-  business: 25000,
-};
-
 export interface OverviewStatsDto {
   planId: PlanId;
+  planName: string;
+  priceMonthly: number;
+  currency: string;
+  subscriptionStatus: 'active' | 'trialing' | 'past_due' | 'canceled' | 'expired';
+  paymentPending: boolean;
+  accessRestricted: boolean;
+  features: string[];
   connectedSites: number;
+  sitesUsed: number;
+  sitesLimit: number;
   aiMessagesUsed: number;
-  aiMessagesLimit: number | null;
+  aiMessagesLimit: number;
   productsSynced: number;
+  productsLimit: number;
+  overLimit: {
+    sites: boolean;
+    products: boolean;
+    aiMessages: boolean;
+  };
   onboardingCompleted: boolean;
   conversationsOpen: number;
   chatMessagesToday: number;
@@ -32,13 +42,16 @@ export interface ActivityItemDto {
 
 @Injectable()
 export class DashboardService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly entitlements: EntitlementService,
+  ) {}
 
   async getOverview(user: AuthenticatedUser): Promise<OverviewStatsDto> {
     const sites = await this.prisma.site.findMany({
       where: { ownerUserId: user.id },
       include: {
-        _count: { select: { products: true, conversations: true } },
+        _count: { select: { conversations: true } },
         credentials: {
           where: { status: CredentialStatus.ACTIVE },
           select: { id: true },
@@ -51,40 +64,40 @@ export class DashboardService {
       (s) => s.status === SiteStatus.ACTIVE && s.credentials.length > 0,
     ).length;
 
-    const productsSynced = sites.reduce((sum, s) => sum + s._count.products, 0);
     const conversationsOpen = sites.reduce((sum, s) => sum + s._count.conversations, 0);
 
-    const planId = this.resolvePlan(sites.map((s) => s.planId));
     const siteIds = sites.map((s) => s.id);
-
-    const periodStart = this.startOfMonth();
     const todayStart = this.startOfDay();
-
-    const [aiMessagesUsed, chatMessagesToday] = siteIds.length
-      ? await Promise.all([
-          this.prisma.usageEvent.count({
-            where: {
-              siteId: { in: siteIds },
-              type: 'chat_message',
-              createdAt: { gte: periodStart },
-            },
-          }),
-          this.prisma.usageEvent.count({
+    const [snapshot, chatMessagesToday] = await Promise.all([
+      this.entitlements.resolveForUser(user.id),
+      siteIds.length
+        ? this.prisma.usageEvent.count({
             where: {
               siteId: { in: siteIds },
               type: 'chat_message',
               createdAt: { gte: todayStart },
             },
-          }),
-        ])
-      : [0, 0];
+          })
+        : Promise.resolve(0),
+    ]);
 
     return {
-      planId,
+      planId: snapshot.plan.slug,
+      planName: snapshot.plan.name,
+      priceMonthly: snapshot.plan.priceMonthly,
+      currency: 'USD',
+      subscriptionStatus: snapshot.status,
+      paymentPending: snapshot.paymentPending,
+      accessRestricted: snapshot.accessRestricted,
+      features: snapshot.plan.features,
       connectedSites,
-      aiMessagesUsed,
-      aiMessagesLimit: PLAN_AI_LIMITS[planId],
-      productsSynced,
+      sitesUsed: snapshot.usage.sites,
+      sitesLimit: snapshot.limits.maxSites,
+      aiMessagesUsed: snapshot.usage.aiMessages,
+      aiMessagesLimit: snapshot.limits.maxAiMessages,
+      productsSynced: snapshot.usage.products,
+      productsLimit: snapshot.limits.maxProducts,
+      overLimit: snapshot.overLimit,
       onboardingCompleted: user.onboardingCompleted,
       conversationsOpen,
       chatMessagesToday,
@@ -156,26 +169,7 @@ export class DashboardService {
       }
     }
 
-    return items
-      .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))
-      .slice(0, 12);
-  }
-
-  private resolvePlan(planIds: string[]): PlanId {
-    const rank: Record<PlanId, number> = { free: 0, pro: 1, business: 2 };
-    let best: PlanId = 'free';
-    for (const raw of planIds) {
-      const id = raw.toLowerCase() as PlanId;
-      if (id in rank && rank[id] > rank[best]) {
-        best = id;
-      }
-    }
-    return best;
-  }
-
-  private startOfMonth(): Date {
-    const now = new Date();
-    return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+    return items.sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)).slice(0, 12);
   }
 
   private startOfDay(): Date {

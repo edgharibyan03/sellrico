@@ -1,4 +1,4 @@
-# NestJS ESLint flat config
+// NestJS ESLint flat config
 import eslint from '@eslint/js';
 import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended';
 import tseslint from 'typescript-eslint';

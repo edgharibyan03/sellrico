@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import Link from "next/link"
+import { AuthCtaLink } from "@/components/auth/auth-cta-link"
 import { buttonVariants } from "@/components/ui/button"
 import { brand } from "@/lib/config/brand"
 
@@ -45,9 +46,7 @@ export default function DocsPage() {
       </div>
 
       <div className="mt-10 flex flex-wrap gap-3">
-        <Link href="/signup" className={buttonVariants()}>
-          Get Started
-        </Link>
+        <AuthCtaLink />
         <Link href="/pricing" className={buttonVariants({ variant: "outline" })}>
           View pricing
         </Link>

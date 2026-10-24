@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { BillingModule } from '../billing/billing.module';
 import { AppConfigModule } from '../config/config.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { AIProviderFactory } from './factory/ai-provider.factory';
@@ -8,7 +9,7 @@ import { OpenAIProvider } from './providers/openai.provider';
 import { CatalogToolExecutor } from './tools/catalog-tool.executor';
 
 @Module({
-  imports: [AppConfigModule, PrismaModule],
+  imports: [AppConfigModule, PrismaModule, BillingModule],
   providers: [
     PlanResolverService,
     OpenAIProvider,

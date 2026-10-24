@@ -79,7 +79,7 @@ export class SyncProductsDto {
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  @ArrayMaxSize(5000)
+  @ArrayMaxSize(10000)
   keepExternalIds?: string[];
 
   @ApiPropertyOptional({

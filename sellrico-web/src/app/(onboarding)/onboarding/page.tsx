@@ -384,8 +384,8 @@ export default function OnboardingPage() {
               <Alert>
                 <AlertDescription>
                   Use the connect code in WordPress (Settings → Shoppio) with
-                  your Shoppio API base URL, then click the button below to
-                  confirm.
+                  API base URL https://api.sellrico.com, then click the button
+                  below to confirm.
                 </AlertDescription>
               </Alert>
               <div className="flex flex-wrap gap-2">

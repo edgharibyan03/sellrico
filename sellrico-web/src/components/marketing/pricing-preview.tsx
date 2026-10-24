@@ -1,9 +1,30 @@
-import Link from "next/link"
-import { buttonVariants } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { formatPlanPrice, pricingConfig } from "@/lib/config/pricing"
+"use client";
+
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { buttonVariants } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { formatPlanPrice } from "@/lib/config/pricing";
+import { getPlans } from "@/lib/api/billing";
+import type { BillingPlan } from "@/lib/types";
 
 export function PricingPreviewSection() {
+  const [plans, setPlans] = useState<BillingPlan[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    void getPlans()
+      .then((next) => {
+        if (active) setPlans(next);
+      })
+      .catch(() => {
+        if (active) setPlans([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
   return (
     <section className="border-b border-border py-20 sm:py-24">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-4 sm:px-6">
@@ -13,15 +34,19 @@ export function PricingPreviewSection() {
               Simple plans for every store
             </h2>
             <p className="mt-3 text-muted-foreground">
-              {pricingConfig.placeholderNote}
+              Start free, then upgrade when you need more sites, products, or AI
+              messages.
             </p>
           </div>
-          <Link href="/pricing" className={buttonVariants({ variant: "outline" })}>
+          <Link
+            href="/pricing"
+            className={buttonVariants({ variant: "outline" })}
+          >
             Compare plans
           </Link>
         </div>
         <div className="grid gap-4 md:grid-cols-3">
-          {pricingConfig.plans.map((plan) => (
+          {plans.map((plan) => (
             <div
               key={plan.id}
               className="flex flex-col gap-4 rounded-xl border border-border bg-card p-6"
@@ -30,7 +55,9 @@ export function PricingPreviewSection() {
                 <h3 className="font-semibold">{plan.name}</h3>
                 {plan.highlighted ? <Badge>Popular</Badge> : null}
               </div>
-              <p className="text-sm text-muted-foreground">{plan.description}</p>
+              <p className="text-sm text-muted-foreground">
+                {plan.description}
+              </p>
               <p className="font-[family-name:var(--font-heading)] text-3xl font-semibold tracking-tight">
                 {formatPlanPrice(plan, "monthly")}
                 <span className="ml-1 text-sm font-normal text-muted-foreground">
@@ -47,5 +74,5 @@ export function PricingPreviewSection() {
         </div>
       </div>
     </section>
-  )
+  );
 }

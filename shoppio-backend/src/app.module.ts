@@ -14,6 +14,8 @@ import { AiModule } from './ai/ai.module';
 import { ChatModule } from './chat/chat.module';
 import { HealthModule } from './health/health.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { BillingModule } from './billing/billing.module';
+import { AssistantModule } from './assistant/assistant.module';
 
 @Module({
   imports: [
@@ -26,6 +28,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
     CommonModule,
     PrismaModule,
     HealthModule,
+    BillingModule,
     AuthModule,
     SitesModule,
     ProductsModule,
@@ -35,6 +38,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
     ChatModule,
     AiModule,
     DashboardModule,
+    AssistantModule,
   ],
 })
 export class AppModule {}

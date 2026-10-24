@@ -17,15 +17,15 @@ describe('AIProviderFactory', () => {
     factory = new AIProviderFactory(planResolver, openAI, deepSeek);
   });
 
-  it('returns DeepSeek for free plan and OpenAI for pro', () => {
+  it('returns DeepSeek for all plans', () => {
     expect(factory.getProviderForPlan('free')).toBe(deepSeek);
-    expect(factory.getProviderForPlan('pro')).toBe(openAI);
-    expect(factory.getProviderForPlan('business')).toBe(openAI);
+    expect(factory.getProviderForPlan('pro')).toBe(deepSeek);
+    expect(factory.getProviderForPlan('business')).toBe(deepSeek);
   });
 
   it('getProviderForUser uses explicit planId', async () => {
     const provider = await factory.getProviderForUser({ planId: 'pro' });
-    expect(provider).toBe(openAI);
+    expect(provider).toBe(deepSeek);
     expect(planResolver.resolvePlanForSite).not.toHaveBeenCalled();
   });
 

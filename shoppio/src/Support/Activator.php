@@ -17,7 +17,7 @@ final class Activator {
 		}
 
 		if ( ! get_option( 'shoppio_api_url' ) ) {
-			add_option( 'shoppio_api_url', '', '', false );
+			add_option( 'shoppio_api_url', 'https://api.sellrico.com', '', false );
 		}
 
 		flush_rewrite_rules();

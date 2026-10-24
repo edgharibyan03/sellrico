@@ -4,6 +4,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { toast } from "sonner"
+import { AuthCtaLink } from "@/components/auth/auth-cta-link"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -16,11 +17,13 @@ import {
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Spinner } from "@/components/ui/spinner"
+import { useAuthGate } from "@/hooks/use-auth-gate"
 import { signup } from "@/lib/api/auth"
 import { getUserFacingError } from "@/lib/api/client"
 
 export default function SignupPage() {
   const router = useRouter()
+  const { loggedIn, status } = useAuthGate()
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -44,6 +47,20 @@ export default function SignupPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  if (status !== "loading" && loggedIn) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>You are signed in</CardTitle>
+          <CardDescription>Continue to your Sellrico dashboard.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <AuthCtaLink className="w-full" />
+        </CardContent>
+      </Card>
+    )
   }
 
   return (

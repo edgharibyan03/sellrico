@@ -29,7 +29,7 @@ Auth, sites, products, and overview talk to `shoppio-backend`. Billing / assista
 | Variable | Purpose |
 |----------|---------|
 | `NEXT_PUBLIC_APP_URL` | Public site URL (SEO / metadata) |
-| `NEXT_PUBLIC_API_URL` | Shoppio API base, e.g. `http://localhost:9001/api/v1` |
+| `NEXT_PUBLIC_API_URL` | Shoppio API base, e.g. `https://api.sellrico.com/api/v1` |
 | `NEXT_PUBLIC_USE_MOCK_API` | `true` enables mocks for unfinished domains only |
 
 Never put private secrets in `NEXT_PUBLIC_*` variables.

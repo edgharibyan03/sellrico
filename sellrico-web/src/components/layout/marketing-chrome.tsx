@@ -4,6 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Menu } from "lucide-react"
 import { useState } from "react"
+import { MarketingAuthActions } from "@/components/auth/auth-cta-link"
 import { Logo } from "@/components/layout/logo"
 import { buttonVariants } from "@/components/ui/button"
 import {
@@ -13,6 +14,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet"
+import { useAuthGate } from "@/hooks/use-auth-gate"
 import { cn } from "@/lib/utils"
 
 const links = [
@@ -43,14 +45,7 @@ export function MarketingHeader() {
             </Link>
           ))}
         </nav>
-        <div className="hidden items-center gap-2 md:flex">
-          <Link href="/login" className={buttonVariants({ variant: "ghost" })}>
-            Log in
-          </Link>
-          <Link href="/signup" className={buttonVariants()}>
-            Get Started
-          </Link>
-        </div>
+        <MarketingAuthActions className="hidden md:flex" />
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger
             className={cn(buttonVariants({ variant: "outline", size: "icon" }), "md:hidden")}
@@ -73,25 +68,45 @@ export function MarketingHeader() {
                   {link.label}
                 </Link>
               ))}
-              <Link
-                href="/signup"
-                onClick={() => setOpen(false)}
-                className={buttonVariants({ className: "mt-2" })}
-              >
-                Get Started
-              </Link>
-              <Link
-                href="/login"
-                onClick={() => setOpen(false)}
-                className={buttonVariants({ variant: "outline" })}
-              >
-                Log in
-              </Link>
+              <MarketingAuthActions
+                stacked
+                onNavigate={() => setOpen(false)}
+              />
             </div>
           </SheetContent>
         </Sheet>
       </div>
     </header>
+  )
+}
+
+function FooterAccountLinks() {
+  const { loggedIn, dashboardHref } = useAuthGate()
+
+  if (loggedIn) {
+    return (
+      <div className="flex flex-col gap-2">
+        <p className="font-medium">Account</p>
+        <Link
+          href={dashboardHref}
+          className="text-muted-foreground hover:text-foreground"
+        >
+          Go to dashboard
+        </Link>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="font-medium">Account</p>
+      <Link href="/login" className="text-muted-foreground hover:text-foreground">
+        Log in
+      </Link>
+      <Link href="/signup" className="text-muted-foreground hover:text-foreground">
+        Sign up
+      </Link>
+    </div>
   )
 }
 
@@ -116,15 +131,7 @@ export function MarketingFooter() {
               Docs
             </Link>
           </div>
-          <div className="flex flex-col gap-2">
-            <p className="font-medium">Account</p>
-            <Link href="/login" className="text-muted-foreground hover:text-foreground">
-              Log in
-            </Link>
-            <Link href="/signup" className="text-muted-foreground hover:text-foreground">
-              Sign up
-            </Link>
-          </div>
+          <FooterAccountLinks />
           <div className="flex flex-col gap-2">
             <p className="font-medium">Legal</p>
             <span className="text-muted-foreground">Privacy (soon)</span>

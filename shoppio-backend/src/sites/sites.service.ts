@@ -8,16 +8,13 @@ import {
 import { CredentialStatus, Prisma, SiteStatus } from '@prisma/client';
 import { randomBytes } from 'crypto';
 import { PlanResolverService } from '../ai/plans/plan-resolver.service';
+import { EntitlementService } from '../billing/entitlement.service';
 import { AppConfigService } from '../config/app-config.service';
 import { AuthenticatedUser } from '../common/types/authenticated-user';
 import { AuthenticatedSite } from '../common/types/authenticated-site';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateSiteDto } from './dto/create-site.dto';
-import {
-  ConnectCodeResponseDto,
-  DashboardSiteDto,
-  SyncProgressDto,
-} from './dto/site-response.dto';
+import { ConnectCodeResponseDto, DashboardSiteDto, SyncProgressDto } from './dto/site-response.dto';
 
 type SiteWithCounts = Prisma.SiteGetPayload<{
   include: {
@@ -33,6 +30,7 @@ export class SitesService {
     private readonly prisma: PrismaService,
     private readonly appConfig: AppConfigService,
     private readonly planResolver: PlanResolverService,
+    private readonly entitlements: EntitlementService,
   ) {}
 
   async getAuthenticatedSite(site: AuthenticatedSite) {
@@ -50,22 +48,29 @@ export class SitesService {
   }
 
   async listForUser(user: AuthenticatedUser): Promise<DashboardSiteDto[]> {
-    const sites = await this.prisma.site.findMany({
-      where: { ownerUserId: user.id },
-      include: this.dashboardInclude(),
-      orderBy: { createdAt: 'desc' },
-    });
-    return sites.map((site) => this.toDashboardDto(site));
+    const [sites, snapshot] = await Promise.all([
+      this.prisma.site.findMany({
+        where: { ownerUserId: user.id },
+        include: this.dashboardInclude(),
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.entitlements.resolveForUser(user.id),
+    ]);
+    return sites.map((site) => this.toDashboardDto(site, snapshot.plan.slug));
   }
 
   async getForUser(user: AuthenticatedUser, siteId: string): Promise<DashboardSiteDto> {
-    const site = await this.findOwnedSite(user.id, siteId);
-    return this.toDashboardDto(site);
+    const [site, snapshot] = await Promise.all([
+      this.findOwnedSite(user.id, siteId),
+      this.entitlements.resolveForUser(user.id),
+    ]);
+    return this.toDashboardDto(site, snapshot.plan.slug);
   }
 
   async createForUser(user: AuthenticatedUser, dto: CreateSiteDto): Promise<DashboardSiteDto> {
     const domain = this.normalizeDomain(dto.domain);
     const name = dto.name?.trim() || domain;
+    const snapshot = await this.entitlements.assertCanCreateSite(user.id);
 
     const site = await this.prisma.site.create({
       data: {
@@ -73,11 +78,12 @@ export class SitesService {
         domain,
         name,
         status: SiteStatus.PENDING,
+        planId: snapshot.plan.slug,
       },
       include: this.dashboardInclude(),
     });
 
-    return this.toDashboardDto(site);
+    return this.toDashboardDto(site, snapshot.plan.slug);
   }
 
   async disconnectForUser(user: AuthenticatedUser, siteId: string): Promise<void> {
@@ -144,12 +150,12 @@ export class SitesService {
     };
   }
 
-  async getConnectionStatus(
-    user: AuthenticatedUser,
-    siteId: string,
-  ): Promise<DashboardSiteDto> {
-    const site = await this.findOwnedSite(user.id, siteId);
-    const dto = this.toDashboardDto(site);
+  async getConnectionStatus(user: AuthenticatedUser, siteId: string): Promise<DashboardSiteDto> {
+    const [site, snapshot] = await Promise.all([
+      this.findOwnedSite(user.id, siteId),
+      this.entitlements.resolveForUser(user.id),
+    ]);
+    const dto = this.toDashboardDto(site, snapshot.plan.slug);
 
     if (dto.connectionStatus !== 'connected') {
       throw new ConflictException({
@@ -227,7 +233,7 @@ export class SitesService {
     } satisfies Prisma.SiteInclude;
   }
 
-  private toDashboardDto(site: SiteWithCounts): DashboardSiteDto {
+  private toDashboardDto(site: SiteWithCounts, planSlug?: string): DashboardSiteDto {
     return {
       id: site.id,
       domain: site.domain,
@@ -236,14 +242,12 @@ export class SitesService {
       productCount: site._count.products,
       lastSyncedAt: site.lastSyncedAt ? site.lastSyncedAt.toISOString() : null,
       connectionStatus: this.resolveConnectionStatus(site),
-      planId: this.planResolver.normalize(site.planId),
+      planId: this.planResolver.normalize(planSlug ?? site.planId),
       createdAt: site.createdAt.toISOString(),
     };
   }
 
-  private resolveConnectionStatus(
-    site: SiteWithCounts,
-  ): DashboardSiteDto['connectionStatus'] {
+  private resolveConnectionStatus(site: SiteWithCounts): DashboardSiteDto['connectionStatus'] {
     if (site.status === SiteStatus.ACTIVE && site.credentials.length > 0) {
       return 'connected';
     }

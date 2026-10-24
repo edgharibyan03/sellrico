@@ -5,14 +5,28 @@ import type { Paginated, Product } from "@/lib/types"
 export async function listProducts(params: {
   siteId?: string
   q?: string
+  category?: string
   page?: number
   pageSize?: number
 } = {}): Promise<Paginated<Product>> {
   const search = new URLSearchParams()
   if (params.siteId) search.set("siteId", params.siteId)
   if (params.q) search.set("q", params.q)
+  if (params.category) search.set("category", params.category)
   if (params.page) search.set("page", String(params.page))
   if (params.pageSize) search.set("pageSize", String(params.pageSize))
   const qs = search.toString()
   return apiRequest<Paginated<Product>>(`/products${qs ? `?${qs}` : ""}`)
+}
+
+export async function listProductCategories(params: {
+  siteId?: string
+} = {}): Promise<string[]> {
+  const search = new URLSearchParams()
+  if (params.siteId) search.set("siteId", params.siteId)
+  const qs = search.toString()
+  const data = await apiRequest<{ categories: string[] }>(
+    `/products/categories${qs ? `?${qs}` : ""}`,
+  )
+  return data.categories ?? []
 }

@@ -1,10 +1,11 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Bot,
   CreditCard,
+  BarChart3,
   Gauge,
   LayoutDashboard,
   LogOut,
@@ -12,22 +13,22 @@ import {
   Package,
   Settings,
   Store,
-} from "lucide-react"
-import { useEffect, useState } from "react"
-import { Logo } from "@/components/layout/logo"
-import { Button, buttonVariants } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
+} from "lucide-react";
+import { useEffect, useState } from "react";
+import { Logo } from "@/components/layout/logo";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from "@/components/ui/sheet"
-import { Skeleton } from "@/components/ui/skeleton"
-import { getSession, logout } from "@/lib/api/auth"
-import type { User } from "@/lib/types"
-import { cn } from "@/lib/utils"
+} from "@/components/ui/sheet";
+import { Skeleton } from "@/components/ui/skeleton";
+import { getSession, logout } from "@/lib/api/auth";
+import type { User } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 const nav = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
@@ -35,16 +36,17 @@ const nav = [
   { href: "/dashboard/assistant", label: "AI Assistant", icon: Bot },
   { href: "/dashboard/products", label: "Products", icon: Package },
   { href: "/dashboard/usage", label: "Usage", icon: Gauge },
+  { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/dashboard/billing", label: "Billing", icon: CreditCard },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
-]
+];
 
 function NavLinks({
   onNavigate,
   pathname,
 }: {
-  onNavigate?: () => void
-  pathname: string
+  onNavigate?: () => void;
+  pathname: string;
 }) {
   return (
     <nav className="flex flex-col gap-1" aria-label="Dashboard">
@@ -52,8 +54,8 @@ function NavLinks({
         const active =
           item.href === "/dashboard"
             ? pathname === "/dashboard"
-            : pathname.startsWith(item.href)
-        const Icon = item.icon
+            : pathname.startsWith(item.href);
+        const Icon = item.icon;
         return (
           <Link
             key={item.href}
@@ -69,38 +71,41 @@ function NavLinks({
             <Icon className="size-4 shrink-0" />
             {item.label}
           </Link>
-        )
+        );
       })}
     </nav>
-  )
+  );
 }
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname()
-  const router = useRouter()
-  const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [mobileOpen, setMobileOpen] = useState(false)
+  const pathname = usePathname();
+  const router = useRouter();
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
     void (async () => {
-      const session = await getSession()
+      const session = await getSession();
       if (!session) {
-        router.replace("/login")
-        return
+        router.replace("/login");
+        return;
       }
-      if (!session.user.onboardingCompleted && !pathname.startsWith("/onboarding")) {
-        router.replace("/onboarding")
-        return
+      if (
+        !session.user.onboardingCompleted &&
+        !pathname.startsWith("/onboarding")
+      ) {
+        router.replace("/onboarding");
+        return;
       }
-      setUser(session.user)
-      setLoading(false)
-    })()
-  }, [pathname, router])
+      setUser(session.user);
+      setLoading(false);
+    })();
+  }, [pathname, router]);
 
   async function handleLogout() {
-    await logout()
-    router.replace("/login")
+    await logout();
+    router.replace("/login");
   }
 
   if (loading) {
@@ -119,7 +124,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           <Skeleton className="h-40 w-full" />
         </main>
       </div>
-    )
+    );
   }
 
   return (
@@ -131,9 +136,15 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           <Separator />
           <div className="px-1">
             <p className="truncate text-sm font-medium">{user?.name}</p>
-            <p className="truncate text-xs text-muted-foreground">{user?.email}</p>
+            <p className="truncate text-xs text-muted-foreground">
+              {user?.email}
+            </p>
           </div>
-          <Button variant="ghost" className="justify-start" onClick={() => void handleLogout()}>
+          <Button
+            variant="ghost"
+            className="justify-start"
+            onClick={() => void handleLogout()}
+          >
             <LogOut data-icon="inline-start" />
             Log out
           </Button>
@@ -145,7 +156,9 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           <Logo href="/dashboard" />
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
             <SheetTrigger
-              className={cn(buttonVariants({ variant: "outline", size: "icon" }))}
+              className={cn(
+                buttonVariants({ variant: "outline", size: "icon" }),
+              )}
               aria-label="Open navigation"
             >
               <Menu />
@@ -155,7 +168,10 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                 <SheetTitle>Navigation</SheetTitle>
               </SheetHeader>
               <div className="mt-4">
-                <NavLinks pathname={pathname} onNavigate={() => setMobileOpen(false)} />
+                <NavLinks
+                  pathname={pathname}
+                  onNavigate={() => setMobileOpen(false)}
+                />
               </div>
               <div className="mt-6 flex flex-col gap-2 border-t border-border pt-4">
                 <p className="text-sm font-medium">{user?.name}</p>
@@ -170,5 +186,5 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8">{children}</main>
       </div>
     </div>
-  )
+  );
 }
