@@ -6,6 +6,7 @@ import {
   getTranslations,
   setRequestLocale,
 } from "next-intl/server"
+import { ThemeProvider } from "@/components/layout/theme-provider"
 import { Toaster } from "@/components/ui/sonner"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { routing } from "@/i18n/routing"
@@ -77,14 +78,22 @@ export default async function LocaleLayout({ children, params }: Props) {
     <html
       lang={locale}
       className={`${manrope.variable} ${manropeHeading.variable} ${plexMono.variable} h-full`}
+      suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col font-sans">
-        <NextIntlClientProvider messages={messages}>
-          <TooltipProvider>
-            {children}
-            <Toaster richColors position="top-right" />
-          </TooltipProvider>
-        </NextIntlClientProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <NextIntlClientProvider messages={messages}>
+            <TooltipProvider>
+              {children}
+              <Toaster richColors position="top-right" />
+            </TooltipProvider>
+          </NextIntlClientProvider>
+        </ThemeProvider>
       </body>
     </html>
   )

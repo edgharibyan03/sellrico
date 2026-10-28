@@ -230,6 +230,9 @@ export class ProductsService {
       imageUrl: item.imageUrl ?? null,
       stockStatus: item.stockStatus ?? null,
       category: item.category ?? null,
+      sku: item.sku?.trim() ? item.sku.trim().slice(0, 128) : null,
+      tags: this.normalizeTags(item.tags),
+      attributes: this.normalizeAttributes(item.attributes),
     };
 
     await tx.product.upsert({
@@ -280,5 +283,38 @@ export class ProductsService {
       return value;
     }
     return 'in_stock';
+  }
+
+  private normalizeTags(tags: string[] | undefined): string[] {
+    if (!Array.isArray(tags)) {
+      return [];
+    }
+    return tags
+      .map((tag) => String(tag).trim())
+      .filter(Boolean)
+      .slice(0, 40);
+  }
+
+  private normalizeAttributes(
+    attributes: Record<string, string | string[]> | undefined,
+  ): Record<string, string | string[]> {
+    if (!attributes || typeof attributes !== 'object') {
+      return {};
+    }
+    const out: Record<string, string | string[]> = {};
+    for (const [key, raw] of Object.entries(attributes)) {
+      const label = String(key).trim().slice(0, 80);
+      if (!label) continue;
+      if (typeof raw === 'string' && raw.trim()) {
+        out[label] = raw.trim().slice(0, 120);
+      } else if (Array.isArray(raw)) {
+        const values = raw
+          .map((item) => String(item).trim())
+          .filter(Boolean)
+          .slice(0, 20);
+        if (values.length) out[label] = values;
+      }
+    }
+    return out;
   }
 }

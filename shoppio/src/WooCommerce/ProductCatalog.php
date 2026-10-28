@@ -128,9 +128,20 @@ final class ProductCatalog {
 			}
 		}
 
+		$tags      = array();
+		$tag_terms = get_the_terms( $product->get_id(), 'product_tag' );
+		if ( is_array( $tag_terms ) ) {
+			foreach ( $tag_terms as $term ) {
+				if ( is_string( $term->name ) && '' !== trim( $term->name ) ) {
+					$tags[] = trim( $term->name );
+				}
+			}
+		}
+
 		$price       = $product->get_price();
 		$name        = $product->get_name();
 		$description = wp_strip_all_tags( $product->get_short_description() ?: $product->get_description() );
+		$sku         = $product->get_sku();
 
 		if ( function_exists( 'mb_substr' ) ) {
 			$name        = mb_substr( $name, 0, self::NAME_MAX );
@@ -150,7 +161,59 @@ final class ProductCatalog {
 			'imageUrl'          => is_string( $image_url ) ? $image_url : null,
 			'stockStatus'       => $this->map_stock_status( $product->get_stock_status() ),
 			'category'          => $categories ? $categories[0] : null,
+			'sku'               => is_string( $sku ) && '' !== trim( $sku ) ? trim( $sku ) : null,
+			'tags'              => array_values( array_slice( $tags, 0, 40 ) ),
+			'attributes'        => $this->map_attributes( $product ),
 		);
+	}
+
+	/**
+	 * Flatten WooCommerce attributes (including variation options on variable products).
+	 *
+	 * @return array<string, string|array<int, string>>
+	 */
+	private function map_attributes( \WC_Product $product ): array {
+		$out = array();
+		foreach ( $product->get_attributes() as $attribute ) {
+			if ( is_object( $attribute ) && method_exists( $attribute, 'get_name' ) ) {
+				$label = wc_attribute_label( $attribute->get_name() );
+				if ( method_exists( $attribute, 'get_options' ) ) {
+					$options = $attribute->get_options();
+					$values  = array();
+					if ( is_array( $options ) ) {
+						foreach ( $options as $option ) {
+							if ( is_numeric( $option ) && taxonomy_exists( $attribute->get_name() ) ) {
+								$term = get_term( (int) $option, $attribute->get_name() );
+								if ( $term && ! is_wp_error( $term ) ) {
+									$values[] = $term->name;
+									continue;
+								}
+							}
+							$values[] = (string) $option;
+						}
+					}
+					$values = array_values(
+						array_filter(
+							array_map(
+								static function ( $value ): string {
+									return trim( wp_strip_all_tags( (string) $value ) );
+								},
+								$values
+							)
+						)
+					);
+					if ( $label && $values ) {
+						$out[ $label ] = count( $values ) === 1 ? $values[0] : array_slice( $values, 0, 20 );
+					}
+				}
+			} elseif ( is_string( $attribute ) && '' !== trim( $attribute ) ) {
+				// Custom product attribute stored as "Name|value1|value2" in some WC versions is rare;
+				// skip opaque strings.
+				continue;
+			}
+		}
+
+		return $out;
 	}
 
 	private function map_stock_status( string $status ): string {

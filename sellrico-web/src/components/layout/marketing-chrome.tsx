@@ -8,6 +8,7 @@ import { useState } from "react"
 import { MarketingAuthActions } from "@/components/auth/auth-cta-link"
 import { LanguageSwitcher } from "@/components/layout/language-switcher"
 import { Logo } from "@/components/layout/logo"
+import { ThemeToggle } from "@/components/layout/theme-toggle"
 import { buttonVariants } from "@/components/ui/button"
 import {
   Sheet,
@@ -50,6 +51,7 @@ export function MarketingHeader() {
           ))}
         </nav>
         <div className="hidden items-center gap-3 md:flex">
+          <ThemeToggle />
           <LanguageSwitcher />
           <MarketingAuthActions />
         </div>
@@ -75,7 +77,10 @@ export function MarketingHeader() {
                   {link.label}
                 </Link>
               ))}
-              <LanguageSwitcher className="mt-2 self-start" />
+              <div className="mt-2 flex items-center gap-2">
+                <ThemeToggle />
+                <LanguageSwitcher />
+              </div>
               <MarketingAuthActions
                 stacked
                 onNavigate={() => setOpen(false)}

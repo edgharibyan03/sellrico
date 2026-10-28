@@ -53,6 +53,8 @@ export interface Product {
   url?: string | null;
 }
 
+export type AssistantIndustry = "auto" | "generic" | "doors";
+
 export interface AssistantSettings {
   siteId: string;
   name: string;
@@ -65,6 +67,10 @@ export interface AssistantSettings {
   offsetRight: number;
   /** Chat launcher offset from the bottom edge, in px. */
   offsetBottom: number;
+  /** Search/AI vertical profile. */
+  industry?: AssistantIndustry;
+  /** Extra merchant instructions for the AI system prompt. */
+  customInstructions?: string;
 }
 
 export interface UsageMetric {

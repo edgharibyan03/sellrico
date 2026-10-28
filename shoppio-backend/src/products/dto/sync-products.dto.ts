@@ -5,6 +5,7 @@ import {
   IsArray,
   IsBoolean,
   IsNumber,
+  IsObject,
   IsOptional,
   IsString,
   MaxLength,
@@ -61,6 +62,29 @@ export class SyncProductItemDto {
   @IsString()
   @MaxLength(255)
   category?: string | null;
+
+  @ApiPropertyOptional({ example: 'SKU-100' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(128)
+  sku?: string | null;
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(40)
+  @IsString({ each: true })
+  @MaxLength(80, { each: true })
+  tags?: string[];
+
+  @ApiPropertyOptional({
+    description: 'Flat attribute map, e.g. { "Color": "White", "Size": ["M","L"] }',
+    type: 'object',
+    additionalProperties: true,
+  })
+  @IsOptional()
+  @IsObject()
+  attributes?: Record<string, string | string[]>;
 }
 
 export class SyncProductsDto {

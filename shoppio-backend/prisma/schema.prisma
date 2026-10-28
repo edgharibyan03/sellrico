@@ -102,6 +102,10 @@ model AssistantSettings {
   offsetRight        Int      @default(20) @map("offset_right")
   /// Distance of the chat launcher from the bottom edge (px).
   offsetBottom       Int      @default(20) @map("offset_bottom")
+  /// Search/AI vertical: auto | generic | doors
+  industry           String   @default("auto") @db.VarChar(32)
+  /// Extra merchant instructions appended to the system prompt.
+  customInstructions String   @default("") @map("custom_instructions") @db.Text
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
 
@@ -153,6 +157,11 @@ model Product {
   imageUrl          String?  @map("image_url")
   stockStatus       String?  @map("stock_status") @db.VarChar(32)
   category          String?
+  sku               String?  @db.VarChar(128)
+  /// WooCommerce product tags (string array).
+  tags              Json     @default("[]")
+  /// Flat attribute map, e.g. { "Color": "White", "Size": ["M","L"] }.
+  attributes        Json     @default("{}")
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
 
@@ -161,6 +170,7 @@ model Product {
   @@unique([siteId, externalProductId])
   @@index([siteId])
   @@index([siteId, name])
+  @@index([siteId, sku])
   @@map("products")
 }
 

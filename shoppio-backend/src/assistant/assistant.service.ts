@@ -16,6 +16,9 @@ export interface AssistantSettingsDto {
   suggestedQuestions: string[];
   offsetRight: number;
   offsetBottom: number;
+  /** auto | generic | doors */
+  industry: string;
+  customInstructions: string;
 }
 
 const DEFAULT_WELCOME =
@@ -54,6 +57,8 @@ export class AssistantService {
         dto.suggestedQuestions,
         dto.offsetRight,
         dto.offsetBottom,
+        dto.industry,
+        dto.customInstructions,
       ].some((value) => value !== undefined);
       if (locked) {
         throw new ForbiddenException({
@@ -80,6 +85,10 @@ export class AssistantService {
       }
       if (dto.offsetRight !== undefined) data.offsetRight = dto.offsetRight;
       if (dto.offsetBottom !== undefined) data.offsetBottom = dto.offsetBottom;
+      if (dto.industry !== undefined) data.industry = dto.industry;
+      if (dto.customInstructions !== undefined) {
+        data.customInstructions = dto.customInstructions.trim().slice(0, 2000);
+      }
     }
 
     const updated = await this.prisma.assistantSettings.update({
@@ -136,6 +145,8 @@ export class AssistantService {
       suggestedQuestions: this.asStringArray(row.suggestedQuestions),
       offsetRight: row.offsetRight,
       offsetBottom: row.offsetBottom,
+      industry: row.industry || 'auto',
+      customInstructions: row.customInstructions || '',
     };
   }
 

@@ -31,6 +31,8 @@
     "language": "Language",
     "languageRu": "Русский",
     "languageEn": "English",
+    "themeToLight": "Switch to light theme",
+    "themeToDark": "Switch to dark theme",
     "included": "Included",
     "notIncluded": "Not included"
   },

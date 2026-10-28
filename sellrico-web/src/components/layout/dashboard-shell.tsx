@@ -16,6 +16,7 @@ import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { Logo } from "@/components/layout/logo";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -161,7 +162,10 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         <Logo href="/dashboard" showProduct className="mb-6" />
         <NavLinks pathname={pathname} labels={navLabels} />
         <div className="mt-auto flex flex-col gap-3 pt-6">
-          <LanguageSwitcher className="justify-center" />
+          <div className="flex items-center justify-center gap-2">
+            <ThemeToggle />
+            <LanguageSwitcher />
+          </div>
           <Separator />
           <div className="px-1">
             <p className="truncate text-sm font-medium">{user?.name}</p>
@@ -204,7 +208,10 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                 />
               </div>
               <div className="mt-6 flex flex-col gap-2 border-t border-border pt-4">
-                <LanguageSwitcher />
+                <div className="flex items-center gap-2">
+                  <ThemeToggle />
+                  <LanguageSwitcher />
+                </div>
                 <p className="text-sm font-medium">{user?.name}</p>
                 <Button variant="outline" onClick={() => void handleLogout()}>
                   <LogOut data-icon="inline-start" />

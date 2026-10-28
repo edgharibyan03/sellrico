@@ -31,6 +31,8 @@
     "language": "Язык",
     "languageRu": "Русский",
     "languageEn": "English",
+    "themeToLight": "Включить светлую тему",
+    "themeToDark": "Включить тёмную тему",
     "included": "Включено",
     "notIncluded": "Не включено"
   },

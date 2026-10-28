@@ -129,6 +129,8 @@ function defaultAssistant(siteId: string): AssistantSettings {
     ],
     offsetRight: 20,
     offsetBottom: 20,
+    industry: "auto",
+    customInstructions: "",
   };
 }
 

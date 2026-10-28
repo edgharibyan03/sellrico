@@ -1,7 +1,9 @@
 /**
- * Rank catalog search hits so accessory noise (latches, hinges, seals)
- * does not outrank the actual product the customer asked for.
+ * Rank catalog search hits by generic relevance.
+ * Optional industry profiles (e.g. doors) add vertical-specific boosts/filters.
  */
+
+export type SearchIndustry = 'auto' | 'generic' | 'doors';
 
 export interface RankableProduct {
   id: string;
@@ -9,9 +11,17 @@ export interface RankableProduct {
   description: string | null;
   category: string | null;
   price: number | null;
+  sku?: string | null;
+  tags?: string[] | null;
+  attributes?: Record<string, string | string[]> | null;
 }
 
-const ACCESSORY_RE =
+export interface RankOptions {
+  /** Default: auto — apply doors rules only when the query looks door-related. */
+  industry?: SearchIndustry;
+}
+
+const DOOR_ACCESSORY_RE =
   /защелк|защёлк|петл|порог|ручк|замок|уплотни|цилиндр|завертк|наличник|доводчик|seal|hinge|latch|handle|lock\b|threshold/i;
 
 const DOOR_INTENT_RE = /двер|door|полотн/i;
@@ -67,9 +77,12 @@ const STOPWORDS = new Set([
   'looking',
 ]);
 
-/** Tokens that are product-type intent, not a specific model/brand. */
+/**
+ * Tokens that are product-type intent, not a specific model/brand.
+ * Kept broad so category nouns do not dominate distinctive model tokens.
+ */
 const GENERIC_PRODUCT_RE =
-  /^(двер[а-яё]*|doors?|полотн[а-яё]*|товар[а-яё]*|products?)$/i;
+  /^(двер[а-яё]*|doors?|полотн[а-яё]*|товар[а-яё]*|products?|item[а-яё]*|items?)$/i;
 
 const CYR_TO_LAT: Record<string, string> = {
   а: 'a',
@@ -181,7 +194,7 @@ export function tokenizeQuery(query: string): string[] {
 
 /**
  * Prefer model/brand tokens for DB candidate fetch so broad words like
- * "двери" do not fill the candidate window and drop "Лондон".
+ * "двери" / "products" do not fill the candidate window.
  */
 export function distinctiveSearchTokens(query: string): string[] {
   const tokens = tokenizeQuery(query);
@@ -198,13 +211,52 @@ export function tokenVariants(token: string): string[] {
   if (token.length >= 5) {
     variants.add(token.slice(0, -2));
   }
-  // Common Russian noun endings stripped once more if still long.
   for (const ending of ['ами', 'ями', 'ов', 'ей', 'ий', 'ый', 'ая', 'ое', 'ые', 'ие']) {
     if (token.endsWith(ending) && token.length - ending.length >= 3) {
       variants.add(token.slice(0, -ending.length));
     }
   }
   return [...variants];
+}
+
+function attributesBlob(
+  attributes: Record<string, string | string[]> | null | undefined,
+): string {
+  if (!attributes || typeof attributes !== 'object') {
+    return '';
+  }
+  return Object.entries(attributes)
+    .flatMap(([key, value]) => {
+      const values = Array.isArray(value) ? value : [value];
+      return [key, ...values.map((v) => String(v))];
+    })
+    .join(' ');
+}
+
+function productSearchBlob(product: RankableProduct): {
+  name: string;
+  category: string;
+  description: string;
+  sku: string;
+  tags: string;
+  attributes: string;
+  all: string;
+} {
+  const name = product.name ?? '';
+  const category = product.category ?? '';
+  const description = product.description ?? '';
+  const sku = product.sku ?? '';
+  const tags = (product.tags ?? []).join(' ');
+  const attributes = attributesBlob(product.attributes);
+  return {
+    name,
+    category,
+    description,
+    sku,
+    tags,
+    attributes,
+    all: `${name} ${category} ${description} ${sku} ${tags} ${attributes}`,
+  };
 }
 
 function fieldContainsToken(field: string, token: string): boolean {
@@ -216,17 +268,30 @@ function fieldContainsToken(field: string, token: string): boolean {
   return [...variants].some((v) => v.length >= 3 && hay.includes(v));
 }
 
-export function scoreProduct(query: string, product: RankableProduct): number {
+function resolveDoorsProfile(
+  industry: SearchIndustry,
+  query: string,
+): boolean {
+  if (industry === 'doors') return true;
+  if (industry === 'generic') return false;
+  // auto: only when the shopper's query is clearly door-related
+  return DOOR_INTENT_RE.test(query) || detectDoorKind(query) != null;
+}
+
+export function scoreProduct(
+  query: string,
+  product: RankableProduct,
+  options: RankOptions = {},
+): number {
   const tokens = tokenizeQuery(query);
   if (tokens.length === 0) {
     return 0;
   }
 
-  const name = product.name ?? '';
-  const category = product.category ?? '';
-  const description = product.description ?? '';
-  const blob = `${name} ${category} ${description}`;
+  const fields = productSearchBlob(product);
   const queryLower = query.toLowerCase().trim();
+  const industry = options.industry ?? 'auto';
+  const useDoors = resolveDoorsProfile(industry, query);
 
   let score = 0;
   let nameHits = 0;
@@ -236,11 +301,14 @@ export function scoreProduct(query: string, product: RankableProduct): number {
   if (distinctive.length > 0) {
     const distinctiveHits = distinctive.filter(
       (token) =>
-        fieldContainsToken(name, token) ||
-        fieldContainsToken(category, token) ||
-        fieldContainsToken(description, token),
+        fieldContainsToken(fields.name, token) ||
+        fieldContainsToken(fields.category, token) ||
+        fieldContainsToken(fields.description, token) ||
+        fieldContainsToken(fields.sku, token) ||
+        fieldContainsToken(fields.tags, token) ||
+        fieldContainsToken(fields.attributes, token),
     );
-    // Model/brand terms are mandatory once present (лондон, uniline, …).
+    // Model/brand/spec terms are mandatory once present.
     if (distinctiveHits.length === 0) {
       return 0;
     }
@@ -248,15 +316,24 @@ export function scoreProduct(query: string, product: RankableProduct): number {
   }
 
   for (const token of tokens) {
-    const inName = fieldContainsToken(name, token);
-    const inCategory = fieldContainsToken(category, token);
-    const inDescription = fieldContainsToken(description, token);
+    const inName = fieldContainsToken(fields.name, token);
+    const inSku = fieldContainsToken(fields.sku, token);
+    const inCategory = fieldContainsToken(fields.category, token);
+    const inTags = fieldContainsToken(fields.tags, token);
+    const inAttributes = fieldContainsToken(fields.attributes, token);
+    const inDescription = fieldContainsToken(fields.description, token);
     if (inName) {
       score += 12;
       nameHits += 1;
       anyHits += 1;
+    } else if (inSku) {
+      score += 11;
+      anyHits += 1;
     } else if (inCategory) {
       score += 6;
+      anyHits += 1;
+    } else if (inTags || inAttributes) {
+      score += 5;
       anyHits += 1;
     } else if (inDescription) {
       score += 3;
@@ -270,40 +347,40 @@ export function scoreProduct(query: string, product: RankableProduct): number {
     score += 18;
   }
 
-  if (queryLower.length >= 4 && name.toLowerCase().includes(queryLower)) {
+  if (queryLower.length >= 4 && fields.name.toLowerCase().includes(queryLower)) {
     score += 30;
   }
 
-  const doorIntent = DOOR_INTENT_RE.test(query);
-  const queryDoorKind = detectDoorKind(query);
-  const productDoorKind = detectDoorKind(`${name} ${category}`);
-  // "под ширину двери" on a threshold is not a door product.
-  const looksLikeAccessory = ACCESSORY_RE.test(name);
-  const looksLikeDoor =
-    !looksLikeAccessory &&
-    (/(?:^|[\s«"'])(?:межкомнатн\w*\s+|входн\w*\s+)?(?:двер|door|полотн)/i.test(name) ||
-      DOOR_INTENT_RE.test(category));
+  if (useDoors) {
+    const doorIntent = DOOR_INTENT_RE.test(query);
+    const queryDoorKind = detectDoorKind(query);
+    const productDoorKind = detectDoorKind(`${fields.name} ${fields.category}`);
+    const looksLikeAccessory = DOOR_ACCESSORY_RE.test(fields.name);
+    const looksLikeDoor =
+      !looksLikeAccessory &&
+      (/(?:^|[\s«"'])(?:межкомнатн\w*\s+|входн\w*\s+)?(?:двер|door|полотн)/i.test(
+        fields.name,
+      ) ||
+        DOOR_INTENT_RE.test(fields.category));
 
-  if (doorIntent && looksLikeAccessory) {
-    return 0;
-  }
-  if (doorIntent && looksLikeDoor) {
-    score += 25;
+    if (doorIntent && looksLikeAccessory) {
+      return 0;
+    }
+    if (doorIntent && looksLikeDoor) {
+      score += 25;
+    }
+    if (queryDoorKind && productDoorKind && queryDoorKind !== productDoorKind) {
+      return 0;
+    }
+    if (
+      !looksLikeAccessory &&
+      queryDoorKind &&
+      productDoorKind === queryDoorKind
+    ) {
+      score += 45;
+    }
   }
 
-  // Hard preference: "межкомнатные" must not surface entrance doors (and vice versa).
-  if (queryDoorKind && productDoorKind && queryDoorKind !== productDoorKind) {
-    return 0;
-  }
-  if (
-    !looksLikeAccessory &&
-    queryDoorKind &&
-    productDoorKind === queryDoorKind
-  ) {
-    score += 45;
-  }
-
-  // Prefer in-stock priced catalog items over zero-price accessories when scores tie later.
   if (product.price != null && product.price > 0) {
     score += 1;
   }
@@ -315,14 +392,19 @@ export function rankProducts<T extends RankableProduct>(
   query: string,
   products: T[],
   limit: number,
+  options: RankOptions = {},
 ): T[] {
-  const queryDoorKind = detectDoorKind(query);
+  const industry = options.industry ?? 'auto';
+  const useDoors = resolveDoorsProfile(industry, query);
+  const queryDoorKind = useDoors ? detectDoorKind(query) : null;
+
   const scored = products
-    .map((product) => ({ product, score: scoreProduct(query, product) }))
+    .map((product) => ({
+      product,
+      score: scoreProduct(query, product, options),
+    }))
     .filter((row) => row.score > 0);
 
-  // If the shopper asked for interior/entrance doors and we have matching hits,
-  // drop the opposite kind even if a weak color/token match slipped through.
   const filtered =
     queryDoorKind == null
       ? scored
@@ -370,29 +452,34 @@ export function pickProductsMentionedInReply<T extends { name: string }>(
       return true;
     }
 
-    // Match distinctive chunks (model names like "LINE WHITE", "SKYLAB").
     const chunks = lower
       .split(/[^a-z0-9а-яё]+/i)
       .map((c) => c.trim())
       .filter((c) => c.length >= 4);
 
+    // Generic filler words — not distinctive product identity.
     const distinctive = chunks.filter(
-      (c) => !/^(межкомнатн\w*|двер\w*|door|белый|белая|цвет|модель|серия|soft|венге|ясень)/i.test(c),
+      (c) =>
+        !/^(товар\w*|product\w*|цвет|модель|серия|size|color|colour|межкомнатн\w*|двер\w*|door)$/i.test(
+          c,
+        ),
     );
 
     if (distinctive.length === 0) {
       return chunks.filter((c) => text.includes(c)).length >= Math.min(2, chunks.length);
     }
 
-    // Latin/model tokens (LINE, PIANO, SKYLAB) are strong enough alone.
     const strongHits = distinctive.filter(
-      (c) => /[a-z]/i.test(c) && text.includes(c),
+      (c) => /[a-z0-9]/i.test(c) && text.includes(c),
     );
     if (strongHits.length >= 1) {
       return true;
     }
 
     const hits = distinctive.filter((c) => text.includes(c)).length;
-    return hits >= Math.min(2, distinctive.length) || (distinctive.length === 1 && hits === 1);
+    return (
+      hits >= Math.min(2, distinctive.length) ||
+      (distinctive.length === 1 && hits === 1)
+    );
   });
 }

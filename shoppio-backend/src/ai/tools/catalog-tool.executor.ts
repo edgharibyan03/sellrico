@@ -6,6 +6,7 @@ import {
   distinctiveSearchTokens,
   expandTokenStems,
   rankProducts,
+  SearchIndustry,
   tokenizeQuery,
 } from './catalog-search.rank';
 
@@ -19,7 +20,29 @@ export interface CatalogProductHint {
   category?: string | null;
   stockStatus?: string | null;
   description?: string | null;
+  sku?: string | null;
+  tags?: string[];
+  attributes?: Record<string, string | string[]>;
 }
+
+export interface CatalogExecuteOptions {
+  industry?: SearchIndustry;
+}
+
+type ProductRow = {
+  id: string;
+  name: string;
+  price: Prisma.Decimal | null;
+  currency: string | null;
+  url: string | null;
+  imageUrl: string | null;
+  category: string | null;
+  stockStatus: string | null;
+  description: string | null;
+  sku: string | null;
+  tags: Prisma.JsonValue;
+  attributes: Prisma.JsonValue;
+};
 
 @Injectable()
 export class CatalogToolExecutor {
@@ -28,12 +51,13 @@ export class CatalogToolExecutor {
   async execute(
     siteId: string,
     call: AIToolCall,
+    options: CatalogExecuteOptions = {},
   ): Promise<{ result: unknown; products: CatalogProductHint[] }> {
     switch (call.name) {
       case 'list_products':
         return this.listProducts(siteId, call.arguments);
       case 'search_products':
-        return this.searchProducts(siteId, call.arguments);
+        return this.searchProducts(siteId, call.arguments, options);
       case 'get_product':
         return this.getProduct(siteId, call.arguments);
       case 'get_product_categories':
@@ -72,14 +96,16 @@ export class CatalogToolExecutor {
   private async searchProducts(
     siteId: string,
     args: Record<string, unknown>,
+    options: CatalogExecuteOptions,
   ): Promise<{ result: unknown; products: CatalogProductHint[] }> {
     const query = String(args.query ?? '').trim();
     const limit = Math.min(10, Math.max(1, Number(args.limit) || 8));
     const priceWhere = this.priceWhere(args);
     const tokens = tokenizeQuery(query);
     const fetchTokens = distinctiveSearchTokens(query);
+    const industry = options.industry ?? 'auto';
 
-    let rows;
+    let rows: ProductRow[];
     if (tokens.length === 0) {
       rows = await this.prisma.product.findMany({
         where: { siteId, ...priceWhere },
@@ -87,14 +113,13 @@ export class CatalogToolExecutor {
         take: limit,
       });
     } else {
-      // Prefer model/brand tokens for the DB candidate window. Broad OR on
-      // "двери" alone can fill take:N and drop exact names like "Лондон".
       const candidateLimit = Math.min(120, Math.max(40, limit * 12));
       const containsAny = (stems: string[]) =>
         stems.flatMap((stem) => [
           { name: { contains: stem, mode: 'insensitive' as const } },
           { description: { contains: stem, mode: 'insensitive' as const } },
           { category: { contains: stem, mode: 'insensitive' as const } },
+          { sku: { contains: stem, mode: 'insensitive' as const } },
         ]);
 
       const andWhere =
@@ -117,7 +142,6 @@ export class CatalogToolExecutor {
         take: candidateLimit,
       });
 
-      // If AND of several distinctive tokens is too strict, OR them.
       if (rows.length === 0 && fetchTokens.length > 1) {
         rows = await this.prisma.product.findMany({
           where: {
@@ -131,7 +155,6 @@ export class CatalogToolExecutor {
         });
       }
 
-      // Last resort: include generic tokens (двери) so bare "двери" still works.
       if (rows.length === 0) {
         rows = await this.prisma.product.findMany({
           where: {
@@ -143,6 +166,20 @@ export class CatalogToolExecutor {
         });
       }
 
+      // Tags/attributes are JSON — pull a wider set and rank in-app when text fields miss.
+      if (rows.length < limit) {
+        const extra = await this.prisma.product.findMany({
+          where: { siteId, ...priceWhere },
+          orderBy: [{ updatedAt: 'desc' }],
+          take: Math.min(200, candidateLimit),
+        });
+        const byId = new Map(rows.map((row) => [row.id, row]));
+        for (const row of extra) {
+          byId.set(row.id, row);
+        }
+        rows = [...byId.values()];
+      }
+
       const ranked = rankProducts(
         query,
         rows.map((row) => ({
@@ -151,8 +188,12 @@ export class CatalogToolExecutor {
           description: row.description,
           category: row.category,
           price: row.price != null ? Number(row.price) : null,
+          sku: row.sku,
+          tags: this.asStringArray(row.tags),
+          attributes: this.asAttributeMap(row.attributes),
         })),
         limit,
+        { industry },
       );
       const byId = new Map(rows.map((row) => [row.id, row]));
       rows = ranked.map((item) => byId.get(item.id)!).filter(Boolean);
@@ -233,23 +274,15 @@ export class CatalogToolExecutor {
     return { result: { categories }, products: [] };
   }
 
-  private toToolPayload(rows: Array<{
-    id: string;
-    name: string;
-    price: Prisma.Decimal | null;
-    currency: string | null;
-    url: string | null;
-    imageUrl: string | null;
-    category: string | null;
-    stockStatus: string | null;
-    description: string | null;
-  }>): { result: unknown; products: CatalogProductHint[] } {
+  private toToolPayload(
+    rows: ProductRow[],
+  ): { result: unknown; products: CatalogProductHint[] } {
     const products = rows.map((p) => this.toHint(p));
     return {
       result: {
         count: products.length,
         note:
-          'Product cards with photos/prices are shown automatically between your intro and follow-up. Do not list product names or prices in the text. Write a short intro, blank line, optional follow-up question.',
+          'Product cards with photos/prices are shown automatically between your intro and follow-up. Do not list product names or prices in the text. Write a short intro, blank line, optional follow-up question. Only mention attributes that appear on the product objects. If size/color/spec is missing, say it is unavailable.',
         products: products.map((p) => this.serializeForModel(p)),
       },
       products,
@@ -267,24 +300,16 @@ export class CatalogToolExecutor {
       hasImage: Boolean(p.imageUrl),
       category: p.category,
       stockStatus: p.stockStatus,
+      ...(p.sku ? { sku: p.sku } : {}),
+      ...(p.tags && p.tags.length ? { tags: p.tags } : {}),
+      ...(p.attributes && Object.keys(p.attributes).length
+        ? { attributes: p.attributes }
+        : {}),
       ...(p.description != null ? { description: p.description } : {}),
     };
   }
 
-  private toHint(
-    p: {
-      id: string;
-      name: string;
-      price: Prisma.Decimal | null;
-      currency: string | null;
-      url: string | null;
-      imageUrl: string | null;
-      category?: string | null;
-      stockStatus?: string | null;
-      description?: string | null;
-    },
-    withDescription = false,
-  ): CatalogProductHint {
+  private toHint(p: ProductRow, withDescription = false): CatalogProductHint {
     return {
       id: p.id,
       name: p.name,
@@ -294,7 +319,45 @@ export class CatalogToolExecutor {
       imageUrl: p.imageUrl,
       category: p.category ?? null,
       stockStatus: p.stockStatus ?? null,
+      sku: p.sku ?? null,
+      tags: this.asStringArray(p.tags),
+      attributes: this.asAttributeMap(p.attributes),
       ...(withDescription ? { description: p.description ?? null } : {}),
     };
+  }
+
+  private asStringArray(value: Prisma.JsonValue): string[] {
+    if (!Array.isArray(value)) {
+      return [];
+    }
+    return value
+      .filter((item): item is string => typeof item === 'string')
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .slice(0, 40);
+  }
+
+  private asAttributeMap(
+    value: Prisma.JsonValue,
+  ): Record<string, string | string[]> {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      return {};
+    }
+    const out: Record<string, string | string[]> = {};
+    for (const [key, raw] of Object.entries(value)) {
+      const label = String(key).trim().slice(0, 80);
+      if (!label) continue;
+      if (typeof raw === 'string' && raw.trim()) {
+        out[label] = raw.trim().slice(0, 120);
+      } else if (Array.isArray(raw)) {
+        const values = raw
+          .filter((item): item is string => typeof item === 'string')
+          .map((item) => item.trim())
+          .filter(Boolean)
+          .slice(0, 20);
+        if (values.length) out[label] = values;
+      }
+    }
+    return out;
   }
 }

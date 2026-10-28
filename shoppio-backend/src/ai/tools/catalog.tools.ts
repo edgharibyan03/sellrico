@@ -31,14 +31,14 @@ export const CATALOG_TOOLS: AIToolDefinition[] = [
   {
     name: 'search_products',
     description:
-      'Search the store catalog by free-text query. Use for specific product requests or recommendations. Supports price filters. Always include distinctive model/series names from the customer (e.g. “Лондон”, “UniLine”) together with product type words. Results are relevance-ranked.',
+      'Search the store catalog by free-text query. Use for product discovery, filtering, comparison, or recommendations. Supports price filters. Include distinctive brand/model/SKU words from the customer together with product-type words when available. Results are relevance-ranked across name, description, category, SKU, tags, and attributes.',
     parameters: {
       type: 'object',
       properties: {
         query: {
           type: 'string',
           description:
-            'Search keywords — keep model/brand names exactly as the customer said them (e.g. “двери Лондон”)',
+            'Search keywords — keep brand/model/SKU terms exactly as the customer said them (e.g. “blue running shoes Nike”, “iPhone 15 128GB”)',
         },
         limit: {
           type: 'integer',

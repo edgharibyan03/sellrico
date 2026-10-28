@@ -14,6 +14,7 @@ import {
 
 const TONES = ['friendly', 'professional', 'concise', 'enthusiastic'] as const;
 const LANGUAGES = ['en', 'ru', 'es', 'fr', 'de'] as const;
+const INDUSTRIES = ['auto', 'generic', 'doors'] as const;
 
 export class UpdateAssistantDto {
   @ApiPropertyOptional()
@@ -65,4 +66,21 @@ export class UpdateAssistantDto {
   @Min(0)
   @Max(200)
   offsetBottom?: number;
+
+  @ApiPropertyOptional({
+    enum: INDUSTRIES,
+    description:
+      'Search/AI vertical. auto applies door heuristics only when the query is door-related; generic disables them; doors enables door-store rules.',
+  })
+  @IsOptional()
+  @IsIn(INDUSTRIES)
+  industry?: (typeof INDUSTRIES)[number];
+
+  @ApiPropertyOptional({
+    description: 'Optional merchant instructions appended to the AI system prompt',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  customInstructions?: string;
 }

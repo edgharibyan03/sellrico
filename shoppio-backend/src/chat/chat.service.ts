@@ -12,10 +12,13 @@ import { randomUUID } from 'crypto';
 import { AIProviderFactory } from '../ai/factory/ai-provider.factory';
 import { AIProviderError } from '../ai/errors/ai-provider.error';
 import { CatalogToolExecutor, CatalogProductHint } from '../ai/tools/catalog-tool.executor';
-import { pickProductsMentionedInReply } from '../ai/tools/catalog-search.rank';
+import {
+  pickProductsMentionedInReply,
+  SearchIndustry,
+} from '../ai/tools/catalog-search.rank';
 import { CATALOG_TOOLS } from '../ai/tools/catalog.tools';
 import { AIMessage } from '../ai/types/ai.types';
-import { AssistantService } from '../assistant/assistant.service';
+import { AssistantService, AssistantSettingsDto } from '../assistant/assistant.service';
 import { AuthenticatedSite } from '../common/types/authenticated-site';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsageService } from '../usage/usage.service';
@@ -126,7 +129,11 @@ export class ChatService {
           });
 
           for (const call of response.toolCalls) {
-            const { result, products } = await this.catalogTools.execute(site.id, call);
+            const { result, products } = await this.catalogTools.execute(
+              site.id,
+              call,
+              { industry: this.resolveIndustry(assistantSettings) },
+            );
             for (const product of products) {
               collectedProducts.set(product.id, product);
             }
@@ -169,16 +176,20 @@ export class ChatService {
     // Guarantee product cards for catalog-style questions even if the model skipped tools.
     if (collectedProducts.size === 0 && this.looksLikeCatalogRequest(dto.message)) {
       const fallbackQuery = dto.message.trim().slice(0, 120);
-      const fallback = await this.catalogTools.execute(site.id, {
-        id: 'fallback_search',
-        name: 'search_products',
-        arguments: {
-          query: fallbackQuery,
-          limit: 8,
-          ...(priceFilters.maxPrice != null ? { maxPrice: priceFilters.maxPrice } : {}),
-          ...(priceFilters.minPrice != null ? { minPrice: priceFilters.minPrice } : {}),
+      const fallback = await this.catalogTools.execute(
+        site.id,
+        {
+          id: 'fallback_search',
+          name: 'search_products',
+          arguments: {
+            query: fallbackQuery,
+            limit: 8,
+            ...(priceFilters.maxPrice != null ? { maxPrice: priceFilters.maxPrice } : {}),
+            ...(priceFilters.minPrice != null ? { minPrice: priceFilters.minPrice } : {}),
+          },
         },
-      });
+        { industry: this.resolveIndustry(assistantSettings) },
+      );
       for (const product of fallback.products) {
         collectedProducts.set(product.id, product);
       }
@@ -335,9 +346,17 @@ export class ChatService {
 
   private looksLikeCatalogRequest(message: string): boolean {
     const text = message.toLowerCase();
-    return /(товар|каталог|продукт|product|catalog|куп|есть|покаж|список|налич|image|картин|фото|photo|цен|price|драм|amd|бюджет|дешев|дорог|ниже|до\s+\d|двер|door)/i.test(
+    return /(товар|каталог|продукт|product|catalog|recommend|посовет|подбер|сравн|compare|куп|есть|покаж|show me|find|looking for|список|налич|in stock|image|картин|фото|photo|цен|price|драм|amd|бюджет|дешев|дорог|скид|sale|ниже|до\s+\d|размер|size|цвет|color|бренд|brand|модел|model|sku)/i.test(
       text,
     );
+  }
+
+  private resolveIndustry(settings: AssistantSettingsDto): SearchIndustry {
+    const raw = String(settings.industry ?? 'auto').toLowerCase().trim();
+    if (raw === 'doors' || raw === 'generic' || raw === 'auto') {
+      return raw;
+    }
+    return 'auto';
   }
 
   private extractPriceFilters(message: string): {
@@ -367,15 +386,14 @@ export class ChatService {
   private buildSystemPrompt(
     site: AuthenticatedSite,
     locale: string | undefined,
-    settings: {
-      name: string;
-      language: string;
-      tone: string;
-    },
+    settings: AssistantSettingsDto,
   ): string {
     const preferred = this.describeLocale(locale ?? settings.language);
     const toneLine = this.describeTone(settings.tone);
-    return [
+    const industry = this.resolveIndustry(settings);
+    const custom = String(settings.customInstructions ?? '').trim();
+
+    const lines = [
       `You are ${settings.name}, a helpful shopping assistant embedded on a WooCommerce storefront chat widget.`,
       `Store: ${site.name} (${site.domain}).`,
       preferred,
@@ -385,30 +403,45 @@ export class ChatService {
       'Turn focus (critical):',
       '- Answer ONLY the latest customer message marked as such.',
       '- Treat earlier messages as background. Do not answer an older off-topic question again.',
-      '- If the latest message is about products, prices, stock, or categories — help with the catalog. Do not bring up weather or other closed topics.',
+      '- If the latest message is about products, prices, stock, categories, or recommendations — help with the catalog. Do not bring up weather or other closed topics.',
       '',
       'Catalog tools:',
-      '- For product requests (doors, categories, models), call search_products with the customer keywords.',
-      '- For price limits (e.g. “under 6000”), pass maxPrice/minPrice.',
-      '- Always call a catalog tool before claiming what is or is not in stock/price range.',
+      '- For product discovery, filtering, comparison, or recommendations, call search_products with the customer keywords.',
+      '- For browsing by category or price bands, use list_products / search_products with maxPrice/minPrice.',
+      '- Always call a catalog tool before claiming what is or is not in stock, price range, or attributes.',
       '- Recommend ONLY products returned by tools in THIS turn.',
-      '- Never invent model names, collections, or prices that are not in the tool results.',
-      '- If tools return accessories (latches, hinges, seals) but the customer asked for doors, say you did not find matching doors — do not invent door models.',
-      '- If the customer asks for межкомнатные doors, do not show входные doors (and vice versa). Prefer a tighter search query like “межкомнатная белая”.',
+      '- Never invent product names, brands, SKUs, prices, stock status, sizes, colors, specs, or compatibility.',
+      '- If an attribute the customer asked about is missing from tool results, say that detail is unavailable — do not guess.',
       '- When the customer asks to show cards of products you just listed, search/get those exact product names/ids again.',
       '',
       'Product reply format (critical when tools return products):',
       '- Product cards with photos/prices are rendered by the chat UI between your intro and follow-up.',
       '- Write ONLY a short intro line, then a blank line, then optionally one short follow-up question.',
-      '- Do NOT list product names, model numbers, prices, bullet lists, or “фото и цены в карточках”.',
+      '- Do NOT list product names, model numbers, prices, or bullet product lists in the text.',
       '- Do NOT repeat what the cards already show.',
       '- Example:',
-      '  Вот белые межкомнатные двери из каталога:',
+      '  Here are matching products from the catalog:',
       '',
-      '  Если нужен определённый размер или с остеклением, скажите — подберу точнее.',
+      '  If you need a specific size, color, or budget, tell me and I will narrow it down.',
       '',
       'Formatting: no markdown (**bold**, [links](url), headings). Plain chat text only.',
-    ].join('\n');
+    ];
+
+    if (industry === 'doors') {
+      lines.push(
+        '',
+        'Store vertical hints (doors):',
+        '- Prefer exact model/series matches from the customer query.',
+        '- If the customer asks for межкомнатные (interior) doors, do not recommend входные (entrance) doors, and vice versa.',
+        '- If tools return hardware accessories (latches, hinges, seals) but the customer asked for doors, say you did not find matching doors.',
+      );
+    }
+
+    if (custom) {
+      lines.push('', 'Merchant instructions:', custom.slice(0, 2000));
+    }
+
+    return lines.join('\n');
   }
 
   private describeTone(tone: string): string {

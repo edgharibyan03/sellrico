@@ -91,6 +91,8 @@ describe('ChatService (provider-independent)', () => {
         suggestedQuestions: [],
         offsetRight: 20,
         offsetBottom: 20,
+        industry: 'auto',
+        customInstructions: '',
       }),
     };
 
@@ -173,6 +175,7 @@ describe('ChatService (provider-independent)', () => {
     expect(catalogTools.execute).toHaveBeenCalledWith(
       'site-1',
       expect.objectContaining({ name: 'search_products' }),
+      expect.objectContaining({ industry: 'auto' }),
     );
     expect(provider.chat).toHaveBeenCalledTimes(2);
     expect(result.reply).toBe('Try the Oak Door.');
@@ -215,6 +218,7 @@ describe('ChatService (provider-independent)', () => {
           query: 'дай доступный список товаров',
         }),
       }),
+      expect.objectContaining({ industry: 'auto' }),
     );
     expect(result.products).toHaveLength(1);
     expect(result.products[0].imageUrl).toBe('http://example.test/p1.jpg');
@@ -253,6 +257,7 @@ describe('ChatService (provider-independent)', () => {
         name: 'search_products',
         arguments: expect.objectContaining({ maxPrice: 6000 }),
       }),
+      expect.objectContaining({ industry: 'auto' }),
     );
   });
 
